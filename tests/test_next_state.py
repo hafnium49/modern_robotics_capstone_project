@@ -18,6 +18,7 @@ def test_forward_x():
     controls = [10, 10, 10, 10] + [0]*5
     cfg = run_for_one_second(controls)
     assert np.allclose(cfg[1], 0.475, atol=1e-3)
+    assert np.allclose(cfg[8], 10.0, atol=1e-6)
 
 
 def test_forward_y():
@@ -30,3 +31,9 @@ def test_rotation():
     controls = [-10, 10, 10, -10] + [0]*5
     cfg = run_for_one_second(controls)
     assert np.allclose(cfg[0], 1.234, atol=1e-3)
+
+
+def test_speed_limit():
+    controls = [10, 10, 10, 10] + [0]*5
+    cfg = run_for_one_second(controls, speed_limit=5.0)
+    assert np.allclose(cfg[1], 0.2375, atol=1e-3)
