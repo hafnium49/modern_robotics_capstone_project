@@ -13,6 +13,8 @@ def parse_args():
     p.add_argument('--dt', type=float, default=0.01)
     p.add_argument('--speed-limit', type=float, default=20.0)
     p.add_argument('--steps', type=int, default=100)
+    p.add_argument('--gripper', type=int, choices=[0, 1], default=0,
+                   help='gripper open (0) or closed (1)')
     return p.parse_args()
 
 
@@ -30,10 +32,10 @@ def main():
     config = load_initial(args.initial)
     controls = np.array(args.controls, dtype=float)
 
-    out_rows = []
+    out_rows = [list(config) + [args.gripper]]
     for _ in range(args.steps):
         config = NextState(config, controls, args.dt, args.speed_limit)
-        out_rows.append(list(config) + [0])
+        out_rows.append(list(config) + [args.gripper])
 
     with open(args.output, 'w', newline='') as f:
         writer = csv.writer(f)
