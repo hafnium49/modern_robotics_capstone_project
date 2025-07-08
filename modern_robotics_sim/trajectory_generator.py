@@ -9,7 +9,16 @@ CLOSED_STATE = 1
 
 
 def segment_time(X0, X1, v_max, omega_max):
-    """Compute the duration of a move between SE(3) poses."""
+    """Compute the duration of a move between SE(3) poses.
+
+    The returned time is already rounded up to the nearest 10 ms
+    increment so that subsequent sampling does not introduce a second
+    rounding error.
+    """
+
+    if v_max <= 0 or omega_max <= 0:
+        raise ValueError("speed caps must be positive")
+
     p0 = X0[:3, 3]
     p1 = X1[:3, 3]
     R0 = X0[:3, :3]
@@ -82,10 +91,17 @@ def _append_segment(rows, T0, T1, duration, grip, method, k, skip_first):
     return poses[-1]
 
 
-def _append_hold(rows, Tpose, duration, grip, k):
-    N = int(np.ceil(duration / DT_REF * k))
+def _append_hold(rows, Tpose, duration, grip, k, skip_first):
+    # Round up to the nearest control interval so that the resulting
+    # row count is always a multiple of ``k`` after the duplicate row
+    # is removed.
+    duration = np.ceil(duration / DT_REF) * DT_REF
+    N = int(duration / DT_REF * k) + 1
     row = _pose_to_row(Tpose, grip)
-    rows.extend([row] * N)
+    for i in range(N):
+        if skip_first and i == 0:
+            continue
+        rows.append(row)
     return Tpose
 
 
@@ -125,7 +141,8 @@ def TrajectoryGenerator(T_se_init,
                            OPEN_STATE, method, k, skip_first=True)
 
     # Segment 3
-    last = _append_hold(traj_rows, T_grasp_init, gripper_dwell, CLOSED_STATE, k)
+    last = _append_hold(traj_rows, T_grasp_init, gripper_dwell, CLOSED_STATE, k,
+                        skip_first=True)
 
     # Segment 4
     T4 = segment_time(T_grasp_init, T_standoff_init, v_max, omega_max)
@@ -143,14 +160,28 @@ def TrajectoryGenerator(T_se_init,
                            CLOSED_STATE, method, k, skip_first=True)
 
     # Segment 7
-    last = _append_hold(traj_rows, T_grasp_goal, gripper_dwell, OPEN_STATE, k)
+    last = _append_hold(traj_rows, T_grasp_goal, gripper_dwell, OPEN_STATE, k,
+                        skip_first=True)
 
     # Segment 8
     T8 = segment_time(T_grasp_goal, T_standoff_goal, v_max, omega_max)
     _append_segment(traj_rows, last, T_standoff_goal, T8,
                     OPEN_STATE, method, k, skip_first=True)
 
-    return np.array(traj_rows)
+    traj = np.array(traj_rows)
+
+    # Drop the very last row (duplicate of the final pose)
+    traj = traj[:-1]
+
+    # Orientation jump guard
+    Rs = traj[:, :9].reshape(-1, 3, 3)
+    for i in range(1, len(Rs)):
+        cos = 0.5 * (np.trace(Rs[i-1].T @ Rs[i]) - 1)
+        cos = np.clip(cos, -1.0, 1.0)
+        ang = np.arccos(cos)
+        assert ang < 0.05, "orientation discontinuity detected"
+
+    return traj
 
 
 def save_trajectory_to_csv(trajectory, filename):
