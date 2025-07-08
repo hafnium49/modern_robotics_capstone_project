@@ -144,3 +144,12 @@ def test_comprehensive_trajectory():
     print(f"Generated trajectory with {len(traj)} points")
     print(f"Trajectory duration: {len(traj) * DT_REF:.2f} seconds")
     print(f"Gripper states: {unique_states}")
+
+
+def test_k_divisible():
+    poses = create_simple_poses()
+    k = 2
+    traj = TrajectoryGenerator(*poses, k=k)
+    assert traj.shape[1] == 13
+    assert len(traj) % k == 0
+    assert set(np.unique(traj[:, -1])).issubset({OPEN_STATE, CLOSED_STATE})
