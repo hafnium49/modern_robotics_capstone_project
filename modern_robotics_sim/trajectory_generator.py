@@ -1,5 +1,6 @@
 import numpy as np
 from modern_robotics import MatrixLog6, MatrixExp6, TransInv
+import os  # ← Import os module
 
 # Fixed constants
 DT_REF = 0.01
@@ -150,3 +151,10 @@ def TrajectoryGenerator(T_se_init,
                     OPEN_STATE, method, k, skip_first=True)
 
     return np.array(traj_rows)
+
+
+def save_trajectory_to_csv(trajectory, filename):
+    """Save trajectory to CSV file with appropriate headers."""
+    # Create the output directory if it doesn't exist
+    output_dir = os.path.join(os.path.dirname(__file__), '..', 'output')  # ← Still references 'output'
+    os.makedirs(output_dir, exist_ok=True)

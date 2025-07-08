@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import sys
+import csv
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -33,6 +34,10 @@ def create_simple_poses():
 def test_basic_properties():
     poses = create_simple_poses()
     traj = TrajectoryGenerator(*poses, k=1)
+    
+    # Save trajectory to CSV
+    save_trajectory_to_csv(traj, 'test_basic_properties_trajectory.csv')
+    
     assert traj.shape[1] == 13
     assert traj[0, -1] == OPEN_STATE
     T0 = np.eye(4)
@@ -53,6 +58,10 @@ def angle_between(R0, R1):
 def test_continuity():
     poses = create_simple_poses()
     traj = TrajectoryGenerator(*poses, k=1)
+    
+    # Save trajectory to CSV
+    save_trajectory_to_csv(traj, 'test_continuity_trajectory.csv')
+    
     for i in range(1, traj.shape[0]):
         R0 = traj[i-1, :9].reshape(3, 3)
         R1 = traj[i, :9].reshape(3, 3)
@@ -63,6 +72,10 @@ def test_continuity():
 def test_dwell_length():
     poses = create_simple_poses()
     traj = TrajectoryGenerator(*poses, k=1)
+    
+    # Save trajectory to CSV
+    save_trajectory_to_csv(traj, 'test_dwell_length_trajectory.csv')
+    
     closed_idx = np.where(traj[:, -1] == CLOSED_STATE)[0]
     first_closed = closed_idx[0]
     dwell_len = np.sum(closed_idx - first_closed == np.arange(len(closed_idx)))
@@ -72,3 +85,62 @@ def test_dwell_length():
     last_open_start = open_idx[splits[-1] + 1] if len(splits) > 0 else open_idx[0]
     dwell_len2 = traj.shape[0] - last_open_start
     assert dwell_len2 >= int(np.ceil(0.625 / DT_REF))
+
+
+def save_trajectory_to_csv(trajectory, filename):
+    """Save trajectory to CSV file with appropriate headers."""
+    # Create the output directory if it doesn't exist
+    output_dir = os.path.join(os.path.dirname(__file__), '..', 'output')
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Define column headers
+    headers = [
+        'r11', 'r12', 'r13',
+        'r21', 'r22', 'r23', 
+        'r31', 'r32', 'r33',
+        'px', 'py', 'pz',
+        'gripper_state'
+    ]
+    
+    # Full path to the CSV file
+    filepath = os.path.join(output_dir, filename)
+    
+    # Write to CSV file
+    with open(filepath, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(headers)
+        writer.writerows(trajectory)
+    
+    print(f"Trajectory saved to: {filepath}")
+    return filepath
+
+
+def test_comprehensive_trajectory():
+    """Test with different parameters and save a comprehensive trajectory."""
+    poses = create_simple_poses()
+    
+    # Generate trajectory with different parameters
+    traj = TrajectoryGenerator(
+        *poses, 
+        k=1, 
+        method="quintic", 
+        v_max=0.1, 
+        omega_max=0.5, 
+        gripper_dwell=0.625
+    )
+    
+    # Save the comprehensive trajectory
+    save_trajectory_to_csv(traj, 'comprehensive_trajectory.csv')
+    
+    # Verify basic properties
+    assert traj.shape[1] == 13
+    assert len(traj) > 0
+    
+    # Check that we have both open and closed states
+    unique_states = np.unique(traj[:, -1])
+    assert OPEN_STATE in unique_states
+    assert CLOSED_STATE in unique_states
+    
+    print(f"Generated trajectory with {len(traj)} points")
+    print(f"Trajectory duration: {len(traj) * DT_REF:.2f} seconds")
+    print(f"Gripper states: {unique_states}")
