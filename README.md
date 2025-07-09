@@ -107,7 +107,38 @@ Running `NextState` for 1 s (100 steps, dt = 0.01 s) with the following wheel sp
 | (‑10,  10, ‑10, 10)  |  y ≈ +0.475 m           |
 | (‑10,  10,  10,‑10)  |  φ ≈ +1.234 rad         |
 
-Unit tests in `tests/test_next_state.py` assert these values (±1 mm / 1 mrad).
+Unit tests in `tests/test_milestone1.py` assert these values (±1 mm / 1 mrad).
+
+### Testing the sample controls
+
+**Option 1: Run automated tests**
+```bash
+pytest tests/test_milestone1.py -v
+```
+
+**Option 2: Generate CSV files for CoppeliaSim Scene 6**
+
+Use the driver module to generate trajectory files for visual verification:
+
+```bash
+# Test 1: Forward motion (+x̂_b direction)
+python -m modern_robotics_sim.driver milestone1/initial_config.csv test1_forward.csv \
+    --controls 10 10 10 10 0 0 0 0 0 --steps 100 --dt 0.01
+
+# Test 2: Sideways motion (+ŷ_b direction) 
+python -m modern_robotics_sim.driver milestone1/initial_config.csv test2_sideways.csv \
+    --controls -10 10 -10 10 0 0 0 0 0 --steps 100 --dt 0.01
+
+# Test 3: Counter-clockwise rotation
+python -m modern_robotics_sim.driver milestone1/initial_config.csv test3_rotation.csv \
+    --controls -10 10 10 -10 0 0 0 0 0 --steps 100 --dt 0.01
+
+# Test 4: Speed-limited forward motion (half distance)
+python -m modern_robotics_sim.driver milestone1/initial_config.csv test4_limited.csv \
+    --controls 10 10 10 10 0 0 0 0 0 --steps 100 --dt 0.01 --speed-limit 5
+```
+
+Load these CSV files in CoppeliaSim Scene 6 to visually verify the robot motions match the expected behaviors.
 
 ---
 
