@@ -265,4 +265,87 @@ These **must** be hard‑coded (but you may expose them as keyword parameters wi
 
 ---
 
+### 6  Testing Milestone 2
+
+#### Option 1: Run automated tests
+```bash
+pytest tests/test_milestone2.py -v
+```
+
+#### Option 2: Testing with Scene 8 (CoppeliaSim)
+
+To verify your Milestone 2 trajectory generator with the CoppeliaSim Scene 8:
+
+#### Step 1: Generate the trajectory CSV
+
+Run the driver script to generate your trajectory CSV file:
+
+```bash
+python modern_robotics_sim/driver.py --milestone 2 --csv
+```
+
+This will create `milestone2/eight_segment_traj.csv` using the **default cube configuration**:
+- **Initial cube pose**: `(1, 0, 0)` (x=1m, y=0m, θ=0°)
+- **Goal cube pose**: `(0, -1, -π/2)` (x=0m, y=-1m, θ=-90°)
+
+For a **custom cube configuration**, you can edit the values in `driver.py` or create your own test script. For example:
+
+```python
+from modern_robotics_sim.trajectory_generator import TrajectoryGenerator
+
+# Custom configuration
+cube_initial = (0.5, 0.5, 0)      # x=0.5m, y=0.5m, θ=0°
+cube_goal = (-0.5, 0.5, np.pi/4)  # x=-0.5m, y=0.5m, θ=45°
+
+tg = TrajectoryGenerator()
+trajectory = tg.TrajectoryGenerator(
+    Tse_initial=tg.get_Tse_initial(),
+    Tsc_initial=tg.get_Tsc_from_pose(*cube_initial),
+    Tsc_final=tg.get_Tsc_from_pose(*cube_goal),
+    Tce_grasp=tg.get_Tce_grasp(),
+    Tce_standoff=tg.get_Tce_standoff(),
+    k=1
+)
+
+# Save to CSV
+import numpy as np
+np.savetxt('milestone2/custom_trajectory.csv', trajectory, delimiter=',')
+```
+
+#### Step 2: Load the CSV in CoppeliaSim
+
+1. Open Scene 8 in CoppeliaSim
+2. Use the scene's built-in CSV loading mechanism to import your trajectory file
+3. The robot should follow the generated trajectory
+
+#### Step 3: Set cube poses in the UI
+
+**Important**: You must manually set the cube poses in the CoppeliaSim UI to match your trajectory's assumptions:
+
+1. **Select the cube object** in the scene hierarchy
+2. **Right-click** → "Object/item properties" or press **Ctrl+D**
+3. In the **Position** tab, set the cube's initial position to match your `Tsc_initial`:
+   - For default config: **X = 1.0, Y = 0.0, Z = 0.025** (cube height)
+4. In the **Orientation** tab, set the cube's initial orientation:
+   - For default config: **α = 0, β = 0, γ = 0** (no rotation)
+5. **Click "Apply"** to confirm the changes
+
+**Coordinate conversion**:
+- Your trajectory uses `(x, y, θ)` where θ is rotation about Z-axis
+- CoppeliaSim uses `(X, Y, Z)` position and `(α, β, γ)` Euler angles
+- Set **Z = 0.025** (cube rests on ground) and **γ = θ** (Z-rotation)
+
+#### Step 4: Verify the motion
+
+1. **Start the simulation** in CoppeliaSim
+2. The robot should:
+   - Move to the cube's initial position
+   - Grasp the cube (gripper closes)
+   - Transport it to the goal location
+   - Release the cube (gripper opens)
+   - Return to standoff position
+3. **Check timing**: The gripper should dwell for at least 0.63 seconds during grasp/release operations
+
+---
+
 Implementing exactly these rules will make your Milestone 2 code compatible with the later **FeedbackControl** loop and with the Coursera autograder.
