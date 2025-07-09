@@ -153,3 +153,35 @@ def test_k_divisible():
     assert traj.shape[1] == 13
     assert len(traj) % k == 0
     assert set(np.unique(traj[:, -1])).issubset({OPEN_STATE, CLOSED_STATE})
+
+
+def test_traj_shape_and_flags():
+    """Automated sanity check from the TrajectoryGenerator cookbook."""
+    # Start the trajectory already at the final standoff so that the
+    # first and last poses should match exactly.
+    poses = list(create_simple_poses())
+    poses[0] = poses[2] @ poses[4]
+    traj = TrajectoryGenerator(*poses, k=1)
+
+    # basic shape
+    assert traj.ndim == 2 and traj.shape[1] == 13
+
+    # gripper flag only 0/1
+    assert set(np.unique(traj[:, -1])).issubset({0, 1})
+
+    # first and last pose equality (final standoff)
+    np.testing.assert_allclose(
+        traj[0, :12],
+        traj[-1, :12],
+        atol=1e-6,
+        err_msg="trajectory should end at final standoff",
+    )
+
+    # continuity guard: no big orientation jumps
+    def angle(R):
+        return np.arccos(0.5 * (np.trace(R.reshape(3, 3)) - 1))
+
+    for i in range(len(traj) - 1):
+        R_i = traj[i, :9].reshape(3, 3)
+        R_j = traj[i + 1, :9].reshape(3, 3)
+        assert angle(R_i.T @ R_j) < 0.09
