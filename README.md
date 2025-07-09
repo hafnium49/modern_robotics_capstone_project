@@ -267,16 +267,18 @@ These **must** be hard‑coded (but you may expose them as keyword parameters wi
 
 ### 6  Testing Milestone 2
 
-#### Option 1: Run automated tests
+To verify your Milestone 2 trajectory generator with CoppeliaSim Scene 8:
+
+#### Step 1: Generate the trajectory CSV
+
+You have two options for generating and verifying trajectories:
+
+**Option 1: Run automated tests**
 ```bash
 pytest tests/test_milestone2.py -v
 ```
 
-#### Option 2: Testing with Scene 8 (CoppeliaSim)
-
-To verify your Milestone 2 trajectory generator with the CoppeliaSim Scene 8:
-
-#### Step 1: Generate the trajectory CSV
+**Option 2: Generate CSV files manually**
 
 Run the driver script to generate your trajectory CSV file:
 
