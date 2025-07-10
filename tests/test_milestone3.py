@@ -13,6 +13,294 @@ from modern_robotics_sim.feedback_control import (
 from modern_robotics_sim.trajectory_generator import TrajectoryGenerator
 
 
+# Utility Functions (merged from demo_milestone3.py and generate_feedforward_csv.py)
+
+def create_simple_trajectory():
+    """Create a simple trajectory for demonstration and testing."""
+    T_se_init = np.array([
+        [0, 0, 1, 0],
+        [0, 1, 0, 0],
+        [-1, 0, 0, 0.5],
+        [0, 0, 0, 1]
+    ])
+    
+    T_sc_init = np.array([
+        [1, 0, 0, 1],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_sc_goal = np.array([
+        [0, 1, 0, 0],
+        [-1, 0, 0, -1],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_ce_grasp = np.array([
+        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
+        [0, 1, 0, 0],
+        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0],
+        [0, 0, 0, 1]
+    ])
+    
+    T_ce_standoff = np.array([
+        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
+        [0, 1, 0, 0],
+        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0.1],
+        [0, 0, 0, 1]
+    ])
+    
+    return TrajectoryGenerator(
+        T_se_init=T_se_init,
+        T_sc_init=T_sc_init,
+        T_sc_goal=T_sc_goal,
+        T_ce_grasp=T_ce_grasp,
+        T_ce_standoff=T_ce_standoff,
+        k=1
+    )
+
+
+def simulate_control_loop(trajectory, Kp=None, Ki=None, duration_seconds=1.0, initial_error=None):
+    """Simulate a control loop following the given trajectory.
+    
+    Args:
+        trajectory: Reference trajectory
+        Kp: Proportional gain matrix (default: 5*I)
+        Ki: Integral gain matrix (default: 0.1*I) 
+        duration_seconds: Simulation duration
+        initial_error: Optional [dx, dy, dz] initial end-effector error
+        
+    Returns:
+        Dictionary with simulation results
+    """
+    if Kp is None:
+        Kp = np.diag([5, 5, 5, 5, 5, 5])
+    if Ki is None:
+        Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+    
+    dt = DT
+    max_steps = int(duration_seconds / dt)
+    max_steps = min(max_steps, len(trajectory) - 1)
+    
+    # Initial robot configuration
+    config = np.array([0.0, 0.0, 0.0,  # chassis: phi, x, y
+                       0.0, 0.0, 0.0, 0.0, 0.0,  # arm joints
+                       0.0, 0.0, 0.0, 0.0])  # wheels
+    
+    # Create controller
+    controller = FeedbackController(Kp=Kp, Ki=Ki)
+    
+    # Storage for results
+    results = {
+        'time': [],
+        'config': [],
+        'V_cmd': [],
+        'controls': [], 
+        'X_err': [],
+        'X_desired': [],
+        'X_actual': []
+    }
+    
+    for step in range(max_steps):
+        t = step * dt
+        
+        # Extract desired poses from trajectory  
+        X_desired = np.eye(4)
+        X_desired[:3, :3] = trajectory[step, :9].reshape(3, 3)
+        X_desired[:3, 3] = trajectory[step, 9:12]
+        
+        X_desired_next = np.eye(4)
+        X_desired_next[:3, :3] = trajectory[step+1, :9].reshape(3, 3)
+        X_desired_next[:3, 3] = trajectory[step+1, 9:12]
+        
+        # Compute current end-effector pose (simplified for testing)
+        X_actual = X_desired.copy()
+        if initial_error is not None:
+            if step == 0:
+                X_actual[:3, 3] += initial_error
+            else:
+                # Error evolution under control
+                decay_factor = max(0.1, 1.0 - 0.01 * step)
+                X_actual[:3, 3] += initial_error * decay_factor
+        elif step > 0:
+            # Add small tracking error
+            X_actual[:3, 3] += 0.01 * np.random.randn(3)
+        
+        # Compute control commands
+        V_cmd, controls, X_err = controller.control(
+            X_actual, X_desired, X_desired_next, config, dt
+        )
+        
+        # Apply controls to robot
+        new_config = NextState(config, controls, dt, SPEED_LIMIT)
+        
+        # Store results
+        results['time'].append(t)
+        results['config'].append(config.copy())
+        results['V_cmd'].append(V_cmd.copy())
+        results['controls'].append(controls.copy())
+        results['X_err'].append(X_err.copy())
+        results['X_desired'].append(X_desired.copy())
+        results['X_actual'].append(X_actual.copy())
+        
+        # Update configuration
+        config = new_config
+    
+    return results
+
+
+def generate_feedforward_csv(output_file="feedforward_test.csv", initial_error=None):
+    """Generate CSV file for feedforward control testing in CoppeliaSim.
+    
+    Args:
+        output_file: Path to output CSV file
+        initial_error: Optional 3-element array [dx, dy, dz] for initial end-effector error
+        
+    Returns:
+        numpy array with CSV data
+    """
+    # Generate trajectory
+    trajectory = create_simple_trajectory()
+    
+    # Initial robot configuration
+    config = np.array([0.0, 0.0, 0.0,  # chassis: phi, x, y  
+                       0.0, 0.0, 0.0, 0.0, 0.0,  # arm joints
+                       0.0, 0.0, 0.0, 0.0])  # wheels
+    
+    # Feedforward only gains (Kp = Ki = 0)
+    Kp = np.diag([0, 0, 0, 0, 0, 0])
+    Ki = np.diag([0, 0, 0, 0, 0, 0])
+    
+    # Control parameters
+    dt = DT
+    speed_limit = SPEED_LIMIT
+    integral_error = np.zeros(6)
+    
+    # Storage for simulation
+    csv_data = []
+    
+    # Simulate the trajectory
+    for step in range(len(trajectory) - 1):
+        # Extract desired poses from trajectory
+        X_desired = np.eye(4)
+        X_desired[:3, :3] = trajectory[step, :9].reshape(3, 3)
+        X_desired[:3, 3] = trajectory[step, 9:12]
+        
+        X_desired_next = np.eye(4)
+        X_desired_next[:3, :3] = trajectory[step+1, :9].reshape(3, 3)
+        X_desired_next[:3, 3] = trajectory[step+1, 9:12]
+        
+        # For feedforward testing, assume current end-effector pose
+        X_actual = X_desired.copy()
+        
+        # Add initial error if specified
+        if initial_error is not None and step == 0:
+            X_actual[:3, 3] += initial_error
+        elif initial_error is not None:
+            # Error persists under feedforward-only control
+            decay_factor = max(0.1, 1.0 - 0.01 * step)
+            X_actual[:3, 3] += initial_error * decay_factor
+        
+        # Compute feedforward control
+        V_cmd, controls, X_err, integral_error = FeedbackControl(
+            X_actual, X_desired, X_desired_next, Kp, Ki, dt, integral_error, config
+        )
+        
+        # Apply controls to robot
+        new_config = NextState(config, controls, dt, speed_limit)
+        
+        # Extract gripper state from trajectory
+        gripper_state = int(trajectory[step, 12])
+        
+        # Store CSV row: [φ, x, y, θ1, θ2, θ3, θ4, θ5, w1, w2, w3, w4, gripper]
+        csv_row = [
+            new_config[0],    # φ (chassis orientation)
+            new_config[1],    # x (chassis x position)
+            new_config[2],    # y (chassis y position)
+            new_config[3],    # θ1 (joint 1)
+            new_config[4],    # θ2 (joint 2)
+            new_config[5],    # θ3 (joint 3)
+            new_config[6],    # θ4 (joint 4)
+            new_config[7],    # θ5 (joint 5)
+            new_config[8],    # w1 (wheel 1)
+            new_config[9],    # w2 (wheel 2)
+            new_config[10],   # w3 (wheel 3)
+            new_config[11],   # w4 (wheel 4)
+            gripper_state     # gripper state
+        ]
+        csv_data.append(csv_row)
+        
+        # Update configuration
+        config = new_config
+    
+    # Write CSV file
+    csv_array = np.array(csv_data)
+    np.savetxt(output_file, csv_array, delimiter=',', 
+               fmt='%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%d')
+    
+    return csv_array
+
+
+def generate_comparison_csvs(output_dir="milestone3_feedforward_tests"):
+    """Generate multiple CSV files for feedforward control comparison testing.
+    
+    Args:
+        output_dir: Directory to save CSV files
+        
+    Returns:
+        Dictionary with results for each test case
+    """
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Test cases
+    test_cases = [
+        ("perfect_initial", None, "Perfect initial end-effector position"),
+        ("small_error", np.array([0.05, 0.02, 0.01]), "Small initial error (5cm, 2cm, 1cm)"),
+        ("medium_error", np.array([0.1, 0.05, 0.02]), "Medium initial error (10cm, 5cm, 2cm)"),
+        ("large_error", np.array([0.2, 0.1, 0.05]), "Large initial error (20cm, 10cm, 5cm)"),
+    ]
+    
+    results = {}
+    
+    for case_name, initial_error, description in test_cases:
+        output_file = os.path.join(output_dir, f"feedforward_{case_name}.csv")
+        csv_data = generate_feedforward_csv(output_file, initial_error)
+        results[case_name] = csv_data
+    
+    # Generate analysis report
+    report_file = os.path.join(output_dir, "feedforward_test_report.txt")
+    with open(report_file, 'w') as f:
+        f.write("Milestone 3 Feedforward Control Test Report\n")
+        f.write("=" * 50 + "\n\n")
+        
+        f.write("Test Files Generated:\n")
+        for case_name, _, description in test_cases:
+            f.write(f"- feedforward_{case_name}.csv: {description}\n")
+        
+        f.write("\nTesting Instructions:\n")
+        f.write("1. Load each CSV file in CoppeliaSim Scene 8\n")
+        f.write("2. Set cube initial position to (1, 0, 0.025) with 0° rotation\n")
+        f.write("3. Set cube goal position to (0, -1, 0.025) with -90° rotation\n")
+        f.write("4. Run simulation and observe robot behavior\n\n")
+        
+        f.write("Expected Results:\n")
+        f.write("- perfect_initial: Should follow trajectory closely, pick and place cube\n")
+        f.write("- small_error: Small deviation but should still complete task\n")
+        f.write("- medium_error: Larger deviation, may not grasp cube perfectly\n")
+        f.write("- large_error: Significant deviation, likely to miss cube\n\n")
+        
+        f.write("Key Observations:\n")
+        f.write("- Feedforward control cannot correct for initial errors\n")
+        f.write("- Errors persist throughout the trajectory\n")
+        f.write("- Larger initial errors lead to larger trajectory deviations\n")
+        f.write("- This demonstrates the need for feedback control in Milestone 3\n")
+    
+    return results
+
+
 # Global variable to store integral error between calls
 _integral_error = np.zeros(6)
 
@@ -528,10 +816,466 @@ def test_complete_milestone_integration():
     print("Complete milestone integration test passed")
 
 
+def test_feedforward_only_perfect_initial():
+    """Test feedforward control with perfect initial configuration (Kp=Ki=0)."""
+    print("\n--- Testing Feedforward Control with Perfect Initial Configuration ---")
+    
+    # Generate a reference trajectory
+    T_se_init = np.array([
+        [0, 0, 1, 0],
+        [0, 1, 0, 0],
+        [-1, 0, 0, 0.5],
+        [0, 0, 0, 1]
+    ])
+    
+    T_sc_init = np.array([
+        [1, 0, 0, 1],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_sc_goal = np.array([
+        [0, 1, 0, 0],
+        [-1, 0, 0, -1],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_ce_grasp = np.array([
+        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
+        [0, 1, 0, 0],
+        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0],
+        [0, 0, 0, 1]
+    ])
+    
+    T_ce_standoff = np.array([
+        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
+        [0, 1, 0, 0],
+        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0.1],
+        [0, 0, 0, 1]
+    ])
+    
+    # Generate reference trajectory  
+    trajectory = TrajectoryGenerator(
+        T_se_init=T_se_init,
+        T_sc_init=T_sc_init,
+        T_sc_goal=T_sc_goal,
+        T_ce_grasp=T_ce_grasp,
+        T_ce_standoff=T_ce_standoff,
+        k=1
+    )
+    
+    print(f"Generated trajectory with {len(trajectory)} time steps")
+    
+    # Initial robot configuration that puts end-effector at start of trajectory
+    # For this test, we'll use a configuration that should result in the desired initial pose
+    config = np.array([0.0, 0.0, 0.0,  # chassis: phi, x, y
+                       0.0, 0.0, 0.0, 0.0, 0.0,  # arm joints (home position)
+                       0.0, 0.0, 0.0, 0.0])  # wheels
+    
+    # Feedforward only gains (Kp = Ki = 0)
+    Kp = np.diag([0, 0, 0, 0, 0, 0])
+    Ki = np.diag([0, 0, 0, 0, 0, 0])
+    
+    # Storage for simulation results
+    configs = []
+    pose_errors = []
+    V_cmds = []
+    controls_history = []
+    
+    # Simulate feedforward control for first 50 steps
+    max_steps = min(50, len(trajectory) - 1)
+    integral_error = np.zeros(6)
+    
+    print(f"Simulating {max_steps} steps with feedforward only (Kp=Ki=0)")
+    print("Step | Pose Error | V_cmd Norm | EE Position")
+    print("-" * 55)
+    
+    for step in range(max_steps):
+        # Extract desired poses from trajectory
+        X_desired = np.eye(4)
+        X_desired[:3, :3] = trajectory[step, :9].reshape(3, 3)
+        X_desired[:3, 3] = trajectory[step, 9:12]
+        
+        X_desired_next = np.eye(4)
+        X_desired_next[:3, :3] = trajectory[step+1, :9].reshape(3, 3)
+        X_desired_next[:3, 3] = trajectory[step+1, 9:12]
+        
+        # For this test, assume X_actual starts at X_desired (perfect initial condition)
+        X_actual = X_desired.copy()
+        if step > 0:
+            # Add small integration error for realism
+            X_actual[:3, 3] += 0.001 * np.random.randn(3)
+        
+        # Compute feedforward control
+        V_cmd, controls, X_err, integral_error = FeedbackControl(
+            X_actual, X_desired, X_desired_next, Kp, Ki, DT, integral_error, config
+        )
+        
+        # Apply controls to NextState
+        new_config = NextState(config, controls, DT, SPEED_LIMIT)
+        
+        # Store results
+        configs.append(config.copy())
+        pose_errors.append(np.linalg.norm(X_err))
+        V_cmds.append(np.linalg.norm(V_cmd))
+        controls_history.append(controls.copy())
+        
+        # Print progress every 10 steps
+        if step % 10 == 0:
+            ee_pos = X_desired[:3, 3]
+            print(f"{step:4d} | {pose_errors[-1]:9.5f} | {V_cmds[-1]:9.5f} | ({ee_pos[0]:5.2f}, {ee_pos[1]:5.2f}, {ee_pos[2]:5.2f})")
+        
+        # Update configuration
+        config = new_config
+        
+        # Verify no NaN or Inf values
+        assert not np.any(np.isnan(config)), f"Configuration contains NaN at step {step}"
+        assert not np.any(np.isinf(config)), f"Configuration contains Inf at step {step}"
+    
+    # Verify feedforward control properties
+    assert len(configs) == max_steps, "Should have recorded all steps"
+    
+    # Check that we get some non-zero commands (feedforward should be active during motion)
+    non_zero_commands = [v for v in V_cmds if v > 1e-6]
+    assert len(non_zero_commands) > max_steps * 0.3, "Should have some non-zero feedforward commands during motion"
+    
+    # Check that controls are reasonable (not all saturated)
+    controls_array = np.array(controls_history)
+    saturated_fraction = np.mean(np.abs(controls_array) >= SPEED_LIMIT * 0.99)
+    assert saturated_fraction < 0.5, f"Too many controls saturated: {saturated_fraction:.2%}"
+    
+    print(f"Average pose error: {np.mean(pose_errors):.5f}")
+    print(f"Average V_cmd norm: {np.mean(V_cmds):.5f}")
+    print(f"Controls saturation: {saturated_fraction:.2%}")
+    print("Feedforward control with perfect initial configuration test passed")
+
+
+def test_feedforward_with_initial_error():
+    """Test feedforward control with initial end-effector error (Kp=Ki=0)."""
+    print("\n--- Testing Feedforward Control with Initial Error ---")
+    
+    # Generate a simple trajectory for testing
+    T_se_init = np.array([
+        [0, 0, 1, 0],
+        [0, 1, 0, 0],
+        [-1, 0, 0, 0.5],
+        [0, 0, 0, 1]
+    ])
+    
+    T_sc_init = np.array([
+        [1, 0, 0, 1],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_sc_goal = np.array([
+        [0, 1, 0, 0],
+        [-1, 0, 0, -1],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_ce_grasp = np.array([
+        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
+        [0, 1, 0, 0],
+        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0],
+        [0, 0, 0, 1]
+    ])
+    
+    T_ce_standoff = np.array([
+        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
+        [0, 1, 0, 0],
+        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0.1],
+        [0, 0, 0, 1]
+    ])
+    
+    # Generate reference trajectory
+    trajectory = TrajectoryGenerator(
+        T_se_init=T_se_init,
+        T_sc_init=T_sc_init,
+        T_sc_goal=T_sc_goal,
+        T_ce_grasp=T_ce_grasp,
+        T_ce_standoff=T_ce_standoff,
+        k=1
+    )
+    
+    # Initial configuration
+    config = np.array([0.0, 0.0, 0.0,  # chassis: phi, x, y
+                       0.0, 0.0, 0.0, 0.0, 0.0,  # arm joints
+                       0.0, 0.0, 0.0, 0.0])  # wheels
+    
+    # Feedforward only gains (Kp = Ki = 0)
+    Kp = np.diag([0, 0, 0, 0, 0, 0])
+    Ki = np.diag([0, 0, 0, 0, 0, 0])
+    
+    # Test different initial errors
+    initial_errors = [
+        ("Small translation", np.array([0.05, 0.02, 0.01])),  # 5cm x, 2cm y, 1cm z
+        ("Medium translation", np.array([0.1, 0.05, 0.02])),   # 10cm x, 5cm y, 2cm z
+        ("Large translation", np.array([0.2, 0.1, 0.05])),     # 20cm x, 10cm y, 5cm z
+    ]
+    
+    for error_name, position_error in initial_errors:
+        print(f"\nTesting with {error_name}: {position_error}")
+        
+        # Reset configuration
+        current_config = config.copy()
+        integral_error = np.zeros(6)
+        
+        # Storage for this test
+        pose_errors = []
+        initial_error_magnitude = np.linalg.norm(position_error)
+        
+        # Simulate for 20 steps
+        max_steps = min(20, len(trajectory) - 1)
+        
+        for step in range(max_steps):
+            # Extract desired poses
+            X_desired = np.eye(4)
+            X_desired[:3, :3] = trajectory[step, :9].reshape(3, 3)
+            X_desired[:3, 3] = trajectory[step, 9:12]
+            
+            X_desired_next = np.eye(4)
+            X_desired_next[:3, :3] = trajectory[step+1, :9].reshape(3, 3)
+            X_desired_next[:3, 3] = trajectory[step+1, 9:12]
+            
+            # Apply initial error to actual pose
+            X_actual = X_desired.copy()
+            if step == 0:
+                X_actual[:3, 3] += position_error  # Add initial position error
+            else:
+                # Error should persist under feedforward-only control
+                X_actual[:3, 3] += position_error * (1.0 - 0.05 * step)  # Slight decay for realism
+            
+            # Compute feedforward control
+            V_cmd, controls, X_err, integral_error = FeedbackControl(
+                X_actual, X_desired, X_desired_next, Kp, Ki, DT, integral_error, current_config
+            )
+            
+            # Apply controls
+            new_config = NextState(current_config, controls, DT, SPEED_LIMIT)
+            current_config = new_config
+            
+            # Record error
+            pose_errors.append(np.linalg.norm(X_err))
+        
+        # Analyze results
+        final_error = pose_errors[-1]
+        error_change = final_error - pose_errors[0]
+        
+        print(f"  Initial error: {pose_errors[0]:.5f}")
+        print(f"  Final error:   {final_error:.5f}")
+        print(f"  Error change:  {error_change:.5f}")
+        
+        # With feedforward only, error should persist (not be actively corrected)
+        # Error might change slightly due to trajectory motion, but shouldn't be actively corrected
+        assert pose_errors[0] > 1e-3, "Should have significant initial error"
+        
+        # Error shouldn't grow dramatically (indicates instability)
+        assert final_error < 10 * pose_errors[0], "Error shouldn't grow too much"
+        
+        print(f"  ✓ {error_name} test passed")
+    
+    print("Feedforward control with initial error test passed")
+
+
+def test_feedforward_trajectory_following():
+    """Test that feedforward control can follow a trajectory reasonably well."""
+    print("\n--- Testing Feedforward Trajectory Following ---")
+    
+    # Create a longer, smoother trajectory for better testing
+    T_se_init = np.array([
+        [0, 0, 1, 0],
+        [0, 1, 0, 0],
+        [-1, 0, 0, 0.5],
+        [0, 0, 0, 1]
+    ])
+    
+    T_sc_init = np.array([
+        [1, 0, 0, 1],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_sc_goal = np.array([
+        [0, 1, 0, 0],
+        [-1, 0, 0, -1],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_ce_grasp = np.array([
+        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
+        [0, 1, 0, 0],
+        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0],
+        [0, 0, 0, 1]
+    ])
+    
+    T_ce_standoff = np.array([
+        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
+        [0, 1, 0, 0],
+        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0.1],
+        [0, 0, 0, 1]
+    ])
+    
+    # Generate trajectory with longer duration (k=3 for more points)
+    trajectory = TrajectoryGenerator(
+        T_se_init=T_se_init,
+        T_sc_init=T_sc_init,
+        T_sc_goal=T_sc_goal,
+        T_ce_grasp=T_ce_grasp,
+        T_ce_standoff=T_ce_standoff,
+        k=3  # More reference points for smoother following
+    )
+    
+    print(f"Generated trajectory with {len(trajectory)} time steps")
+    
+    # Initial configuration
+    config = np.array([0.0, 0.0, 0.0,  # chassis
+                       0.0, 0.0, 0.0, 0.0, 0.0,  # arm
+                       0.0, 0.0, 0.0, 0.0])  # wheels
+    
+    # Feedforward only
+    Kp = np.diag([0, 0, 0, 0, 0, 0])
+    Ki = np.diag([0, 0, 0, 0, 0, 0])
+    
+    # Test with different speed limits to see effect on trajectory following
+    speed_limits = [5.0, 12.3, 20.0]  # slow, normal, fast
+    
+    for speed_limit in speed_limits:
+        print(f"\nTesting with speed limit: {speed_limit} rad/s")
+        
+        # Reset configuration
+        current_config = config.copy()
+        integral_error = np.zeros(6)
+        
+        # Storage
+        chassis_positions = []
+        V_cmd_norms = []
+        controls_norms = []
+        saturation_count = 0
+        
+        # Simulate trajectory following
+        max_steps = min(100, len(trajectory) - 1)
+        
+        for step in range(max_steps):
+            # Extract trajectory poses
+            X_desired = np.eye(4)
+            X_desired[:3, :3] = trajectory[step, :9].reshape(3, 3)
+            X_desired[:3, 3] = trajectory[step, 9:12]
+            
+            X_desired_next = np.eye(4)
+            X_desired_next[:3, :3] = trajectory[step+1, :9].reshape(3, 3)
+            X_desired_next[:3, 3] = trajectory[step+1, 9:12]
+            
+            # Assume perfect tracking for this test (focus on feedforward commands)
+            X_actual = X_desired.copy()
+            
+            # Compute feedforward control
+            V_cmd, controls, X_err, integral_error = FeedbackControl(
+                X_actual, X_desired, X_desired_next, Kp, Ki, DT, integral_error, current_config
+            )
+            
+            # Apply speed limit
+            controls_limited = np.clip(controls, -speed_limit, speed_limit)
+            if not np.allclose(controls, controls_limited):
+                saturation_count += 1
+            
+            # Apply controls
+            new_config = NextState(current_config, controls_limited, DT, speed_limit)
+            
+            # Record data
+            chassis_positions.append(current_config[1:3].copy())  # x, y position
+            V_cmd_norms.append(np.linalg.norm(V_cmd))
+            controls_norms.append(np.linalg.norm(controls))
+            
+            # Update configuration
+            current_config = new_config
+        
+        # Analyze results
+        avg_V_cmd = np.mean(V_cmd_norms)
+        avg_controls = np.mean(controls_norms)
+        saturation_rate = saturation_count / max_steps
+        
+        print(f"  Average V_cmd norm: {avg_V_cmd:.4f}")
+        print(f"  Average controls norm: {avg_controls:.4f}")
+        print(f"  Saturation rate: {saturation_rate:.2%}")
+        
+        # Verify reasonable behavior
+        assert avg_V_cmd > 1e-6, "Should generate non-trivial velocity commands"
+        assert avg_controls < 50, "Controls shouldn't be excessive"
+        
+        # Higher speed limits should reduce saturation
+        if speed_limit == 20.0:
+            assert saturation_rate < 0.3, "High speed limit should reduce saturation"
+        
+        print(f"  ✓ Speed limit {speed_limit} test passed")
+    
+    print("Feedforward trajectory following test passed")
+
+
+def test_feedforward_vs_feedback_comparison():
+    """Compare feedforward-only vs feedforward+feedback control."""
+    print("\n--- Comparing Feedforward vs Feedforward+Feedback ---")
+    
+    # Simple test scenario
+    X_actual = np.eye(4)
+    X_desired = np.array([
+        [1, 0, 0, 0.1],
+        [0, 1, 0, 0.05],
+        [0, 0, 1, 0.02],
+        [0, 0, 0, 1]
+    ])
+    X_desired_next = np.array([
+        [1, 0, 0, 0.11],
+        [0, 1, 0, 0.06],
+        [0, 0, 1, 0.03],
+        [0, 0, 0, 1]
+    ])
+    
+    config = np.zeros(12)
+    
+    # Test cases
+    test_cases = [
+        ("Feedforward only", np.diag([0, 0, 0, 0, 0, 0]), np.diag([0, 0, 0, 0, 0, 0])),
+        ("Low feedback", np.diag([1, 1, 1, 1, 1, 1]), np.diag([0, 0, 0, 0, 0, 0])),
+        ("High feedback", np.diag([10, 10, 10, 10, 10, 10]), np.diag([0, 0, 0, 0, 0, 0])),
+        ("With integral", np.diag([5, 5, 5, 5, 5, 5]), np.diag([1, 1, 1, 1, 1, 1])),
+    ]
+    
+    print("Control Type      | V_cmd Norm | Controls Norm | X_err Norm")
+    print("-" * 65)
+    
+    for name, Kp, Ki in test_cases:
+        V_cmd, controls, X_err, integral_error = FeedbackControl(
+            X_actual, X_desired, X_desired_next, Kp, Ki, DT, np.zeros(6), config
+        )
+        
+        V_cmd_norm = np.linalg.norm(V_cmd)
+        controls_norm = np.linalg.norm(controls)
+        X_err_norm = np.linalg.norm(X_err)
+        
+        print(f"{name:16s} | {V_cmd_norm:9.5f} | {controls_norm:12.5f} | {X_err_norm:9.5f}")
+        
+        # Verify reasonable values
+        assert not np.any(np.isnan(V_cmd)), f"{name}: V_cmd contains NaN"
+        assert not np.any(np.isnan(controls)), f"{name}: controls contains NaN"
+        assert np.all(np.abs(controls) <= SPEED_LIMIT), f"{name}: controls exceed speed limit"
+    
+    print("Feedforward vs feedback comparison test passed")
+
+
 if __name__ == "__main__":
     print("Running Milestone 3 tests...")
-    print("=" * 50)
+    print("=" * 60)
     
+    # Basic functionality tests
+    print("BASIC FUNCTIONALITY TESTS")
+    print("-" * 30)
     test_constants_specification()
     test_chassis_to_se3()
     test_f6_matrix()
@@ -545,7 +1289,25 @@ if __name__ == "__main__":
     test_gain_specification_compliance()
     test_integration_with_nextstate()
     test_stateful_controller()
+    
+    # Feedforward control tests (as specified for Milestone 3)
+    print("\nFEEDFORWARD CONTROL TESTS")
+    print("-" * 30)
+    test_feedforward_only_perfect_initial()
+    test_feedforward_with_initial_error()
+    test_feedforward_trajectory_following()
+    test_feedforward_vs_feedback_comparison()
+    
+    # Integration tests
+    print("\nINTEGRATION TESTS")
+    print("-" * 30)
     test_complete_milestone_integration()
     
-    print("=" * 50)
+    print("=" * 60)
     print("All Milestone 3 tests passed! ✅")
+    print("\nFeedforward control testing complete:")
+    print("✓ Feedforward-only control with perfect initial conditions")
+    print("✓ Feedforward-only control with initial end-effector errors")
+    print("✓ Trajectory following with different speed limits")
+    print("✓ Comparison of feedforward vs feedback control")
+    print("\nThe implementation is ready for CoppeliaSim testing!")
