@@ -119,11 +119,11 @@ def simulate_control_loop(trajectory, Kp=None, Ki=None, duration_seconds=1.0, in
         X_actual = X_desired.copy()
         if initial_error is not None:
             if step == 0:
-                X_actual[:3, 3] += initial_error
+                X_actual[:3, 3] += np.array(initial_error)
             else:
                 # Error evolution under control
                 decay_factor = max(0.1, 1.0 - 0.01 * step)
-                X_actual[:3, 3] += initial_error * decay_factor
+                X_actual[:3, 3] += np.array(initial_error) * decay_factor
         elif step > 0:
             # Add small tracking error
             X_actual[:3, 3] += 0.01 * np.random.randn(3)
@@ -149,6 +149,106 @@ def simulate_control_loop(trajectory, Kp=None, Ki=None, duration_seconds=1.0, in
         config = new_config
     
     return results
+
+
+def plot_results(results):
+    """Plot the simulation results."""
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("Matplotlib not available - cannot plot results")
+        return
+    
+    time = np.array(results['time'])
+    configs = np.array(results['config'])
+    V_cmds = np.array(results['V_cmd'])
+    X_errs = np.array(results['X_err'])
+    controls = np.array(results['controls'])
+    
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    fig.suptitle('Milestone 3 Control Simulation Results', fontsize=16)
+    
+    # Plot 1: Chassis trajectory
+    ax1 = axes[0, 0]
+    ax1.plot(configs[:, 1], configs[:, 2], 'b-', linewidth=2, label='Chassis trajectory')
+    ax1.scatter(configs[0, 1], configs[0, 2], color='green', s=100, label='Start', zorder=5)
+    ax1.scatter(configs[-1, 1], configs[-1, 2], color='red', s=100, label='End', zorder=5)
+    ax1.set_xlabel('X position (m)')
+    ax1.set_ylabel('Y position (m)')
+    ax1.set_title('Chassis Trajectory')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+    ax1.axis('equal')
+    
+    # Plot 2: Control commands
+    ax2 = axes[0, 1]
+    wheel_commands = controls[:, :4]
+    for i in range(4):
+        ax2.plot(time, wheel_commands[:, i], label=f'Wheel {i+1}')
+    ax2.set_xlabel('Time (s)')
+    ax2.set_ylabel('Wheel speed (rad/s)')
+    ax2.set_title('Wheel Commands')
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+    
+    # Plot 3: Task-space error
+    ax3 = axes[1, 0]
+    error_norms = [np.linalg.norm(err) for err in X_errs]
+    ax3.plot(time, error_norms, 'r-', linewidth=2)
+    ax3.set_xlabel('Time (s)')
+    ax3.set_ylabel('||X_err|| (m, rad)')
+    ax3.set_title('Task-Space Error Magnitude')
+    ax3.grid(True, alpha=0.3)
+    
+    # Plot 4: Commanded twist
+    ax4 = axes[1, 1]
+    V_cmd_norms = [np.linalg.norm(V) for V in V_cmds]
+    ax4.plot(time, V_cmd_norms, 'g-', linewidth=2)
+    ax4.set_xlabel('Time (s)')
+    ax4.set_ylabel('||V_cmd|| (m/s, rad/s)')
+    ax4.set_title('Commanded Twist Magnitude')
+    ax4.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+
+
+def demonstrate_gain_effects():
+    """Demonstrate the effect of different control gains."""
+    print("\n" + "="*60)
+    print("Demonstrating the effect of different control gains")
+    print("="*60)
+    
+    # Simple reference poses
+    X_actual = np.eye(4)
+    X_desired = np.array([
+        [1, 0, 0, 0.1],
+        [0, 1, 0, 0.0],
+        [0, 0, 1, 0.0],
+        [0, 0, 0, 1]
+    ])
+    X_desired_next = X_desired  # No motion
+    config = np.zeros(12)
+    
+    gain_sets = [
+        ("Low Kp", np.diag([1, 1, 1, 1, 1, 1]), np.diag([0, 0, 0, 0, 0, 0])),
+        ("High Kp", np.diag([10, 10, 10, 10, 10, 10]), np.diag([0, 0, 0, 0, 0, 0])),
+        ("Kp + Ki", np.diag([5, 5, 5, 5, 5, 5]), np.diag([1, 1, 1, 1, 1, 1])),
+    ]
+    
+    print("Gain Set    | X_err_norm | V_cmd_norm | Controls_norm")
+    print("-" * 55)
+    
+    for name, Kp, Ki in gain_sets:
+        V_cmd, controls, X_err, integral_error = FeedbackControl(
+            X_actual, X_desired, X_desired_next, Kp, Ki, DT, np.zeros(6), config
+        )
+        
+        X_err_norm = np.linalg.norm(X_err)
+        V_cmd_norm = np.linalg.norm(V_cmd)
+        controls_norm = np.linalg.norm(controls)
+        
+        print(f"{name:10s} | {X_err_norm:8.4f} | {V_cmd_norm:8.4f} | {controls_norm:10.4f}")
 
 
 def generate_feedforward_csv(output_file="feedforward_test.csv", initial_error=None):
@@ -197,11 +297,11 @@ def generate_feedforward_csv(output_file="feedforward_test.csv", initial_error=N
         
         # Add initial error if specified
         if initial_error is not None and step == 0:
-            X_actual[:3, 3] += initial_error
+            X_actual[:3, 3] += np.array(initial_error)
         elif initial_error is not None:
             # Error persists under feedforward-only control
             decay_factor = max(0.1, 1.0 - 0.01 * step)
-            X_actual[:3, 3] += initial_error * decay_factor
+            X_actual[:3, 3] += np.array(initial_error) * decay_factor
         
         # Compute feedforward control
         V_cmd, controls, X_err, integral_error = FeedbackControl(
