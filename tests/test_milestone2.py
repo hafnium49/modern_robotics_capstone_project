@@ -13,6 +13,34 @@ from modern_robotics_sim.trajectory_generator import (
 )
 
 
+def extract_pose_2d(T):
+    """Extract (x, y, θ) from a 4x4 SE(3) transformation matrix.
+    
+    Args:
+        T: 4x4 numpy array representing SE(3) transformation
+        
+    Returns:
+        tuple: (x, y, theta) where theta is in radians
+    """
+    x = T[0, 3]
+    y = T[1, 3]
+    theta = np.arctan2(T[1, 0], T[0, 0])
+    return x, y, theta
+
+
+def print_cube_configurations(T_sc_init, T_sc_goal, test_name=""):
+    """Print cube configurations in (x, y, θ) format."""
+    x_init, y_init, theta_init = extract_pose_2d(T_sc_init)
+    x_goal, y_goal, theta_goal = extract_pose_2d(T_sc_goal)
+    
+    if test_name:
+        print(f"\n{test_name} - Cube configurations:")
+    else:
+        print(f"\nCube configurations:")
+    print(f"  Initial: (x={x_init:.3f}, y={y_init:.3f}, θ={theta_init:.3f} rad)")
+    print(f"  Goal:    (x={x_goal:.3f}, y={y_goal:.3f}, θ={theta_goal:.3f} rad)")
+
+
 def create_simple_poses():
     """Create poses for basic testing."""
     T_se_init = np.eye(4)
@@ -29,6 +57,10 @@ def create_simple_poses():
     T_ce_grasp = np.eye(4)
     T_ce_standoff = np.eye(4)
     T_ce_standoff[2, 3] = 0.1
+    
+    # Print configurations for simple test
+    print_cube_configurations(T_sc_init, T_sc_goal, "Simple Test")
+    
     return T_se_init, T_sc_init, T_sc_goal, T_ce_grasp, T_ce_standoff
 
 
@@ -61,6 +93,9 @@ def create_scene8_poses():
         [0, 0, 1, 0.025],  # cube height/2
         [0, 0, 0, 1]
     ])
+    
+    # Print configurations for Scene 8 default
+    print_cube_configurations(T_sc_init, T_sc_goal, "Scene 8 Default")
     
     # Grasp pose relative to cube (approach from above)
     T_ce_grasp = np.array([
@@ -266,9 +301,9 @@ def test_scene8_default_configuration():
     print(f"Scene 8 trajectory saved to: {filepath}")
     print(f"Total rows: {len(traj)}")
     print(f"Trajectory duration: {len(traj) * DT_REF:.2f} seconds")
-    print(f"Cube configurations:")
-    print(f"  Initial: x={T_sc_init[0,3]:.1f}, y={T_sc_init[1,3]:.1f}, θ={np.arctan2(T_sc_init[1,0], T_sc_init[0,0]):.1f}")
-    print(f"  Goal: x={T_sc_goal[0,3]:.1f}, y={T_sc_goal[1,3]:.1f}, θ={np.arctan2(T_sc_goal[1,0], T_sc_goal[0,0]):.3f}")
+    
+    # Print cube configurations using the helper function
+    print_cube_configurations(T_sc_init, T_sc_goal, "Scene 8 Default")
     
     # Verify basic properties
     assert traj.shape[1] == 13
@@ -328,9 +363,9 @@ def test_scene8_custom_configuration():
     
     print(f"Custom Scene 8 trajectory saved to: {filepath}")
     print(f"Total rows: {len(traj)}")
-    print(f"Custom cube configurations:")
-    print(f"  Initial: x={T_sc_init[0,3]:.1f}, y={T_sc_init[1,3]:.1f}, θ={np.arctan2(T_sc_init[1,0], T_sc_init[0,0]):.3f}")
-    print(f"  Goal: x={T_sc_goal[0,3]:.1f}, y={T_sc_goal[1,3]:.1f}, θ={np.arctan2(T_sc_goal[1,0], T_sc_goal[0,0]):.3f}")
+    
+    # Print cube configurations using the helper function
+    print_cube_configurations(T_sc_init, T_sc_goal, "Scene 8 Custom")
     
     # Verify trajectory properties
     assert traj.shape[1] == 13
