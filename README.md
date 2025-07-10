@@ -351,3 +351,170 @@ np.savetxt('milestone2/custom_trajectory.csv', trajectory, delimiter=',')
 ---
 
 Implementing exactly these rules will make your Milestone 2 code compatible with the later **FeedbackControl** loop and with the Coursera autograder.
+
+---
+
+## Milestone 3 – **Feed‑Forward + PI Task‑Space Control**
+
+Your submission must contain **one callable function** (you may of course split the work across helpers) that turns the next two poses on the reference trajectory into wheel and joint rates for one control cycle, plus any state you need to carry between cycles.  The Coursera autograder will run it in a loop together with the Milestone 1 simulator and the Milestone 2 trajectory generator.
+
+---
+
+### 1.  Public API the autograder will call
+
+```python
+def FeedbackControl(
+        X_actual,            # 4×4 SE(3) matrix – current end‑effector pose
+        X_desired,           # 4×4 – reference pose at time step i
+        X_desired_next,      # 4×4 – reference pose at time step i+1 (Δt later)
+        Kp, Ki,              # 6×6 diagonal gain matrices
+        dt,                  # scalar time step (seconds)
+        integral_error_prev  # 6‑vector carried over from last call
+    ):
+    """
+    Returns
+    -------
+    V_cmd : 6‑vector  – commanded twist in frame {e}
+    controls : 9‑vector – [u1 u2 u3 u4 θ̇1 … θ̇5]
+    X_err : 6‑vector  – twist that takes X_actual to X_desired
+    integral_error_new : 6‑vector – updated ∫X_err dt
+    """
+```
+
+*Write the helper that turns `V_cmd` into the 9‑vector exactly as shown in Eq. (13.37) of the book:*
+
+```
+[u  θ̇]^T  =  J_e(θ,φ)†  ·  V_cmd
+```
+
+---
+
+### 2.  Fixed constants your code **must** use
+
+| Symbol           | Value                                                                                                               | Meaning                                            | Source              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------- |
+| `r`              | **0.0475 m**                                                                                                        | wheel radius                                       | youBot spec         |
+| `l`              | **0.235 m**                                                                                                         | half front‑back wheel separation (2 l = 0.47 m)    | fig. "wheel layout" |
+| `w`              | **0.150 m**                                                                                                         | half side‑side wheel separation (2 w = 0.30 m)     | same                |
+| `Tb0`            | `[[1,0,0,0.1662],[0,1,0,0],[0,0,1,0.0026],[0,0,0,1]]`                                                               | chassis‑to‑arm‑base transform                      | wiki page           |
+| `M0e`            | `[[1,0,0,0.033],[0,1,0,0],[0,0,1,0.6546],[0,0,0,1]]`                                                                | home pose of the gripper in frame {0}              | wiki page           |
+| `Blist`          | columns:  $(0,0,1, 0,0.033,0); (0,-1,0, -0.5076,0,0); (0,-1,0, -0.3526,0,0); (0,-1,0, -0.2176,0,0); (0,0,1, 0,0,0)$ | body screw axes of the 5 joints (expressed in {e}) | wiki page           |
+| `F6`             | see §2.2 below                                                                                                      | 6 × 4 matrix mapping wheel rates → chassis twist   | derived below       |
+| `dt`             | **0.010 s**                                                                                                         | controller sample time (matches csv timing)        | project spec        |
+| `speed_limit`    | **12.3 rad s‑1** (apply to each wheel and joint)                                                                    | Milestone 1 text                                   |                     |
+| `pinv_tolerance` | **1 × 10‑3** (singular values < tol → 0)                                                                            | guideline in "Singularities" section               |                     |
+
+#### 2.1  Base inverse‑kinematics constants
+
+Number the wheels as shown in the wiki (front‑left = 1 counter‑clockwise).
+The **3 × 4** matrix $H^{(0)}$ that converts chassis twist *V<sub>b</sub>* to wheel speeds *u* is
+
+$$
+H^{(0)} = \frac{1}{r}
+\begin{bmatrix}
+ -1 &  1 &  1 & -1 \\
+  1 &  1 &  1 &  1 \\
+ \tfrac{1}{l+w} & -\tfrac{1}{l+w} & \tfrac{1}{l+w} & -\tfrac{1}{l+w}
+\end{bmatrix}
+$$
+
+You need its **pseudo‑inverse** once per cycle:
+
+$$
+F = (H^{(0)})^{\#}      \qquad\text{(3 × 4 → gives planar twist from wheel rates)}
+$$
+
+Embed that in 6‑D:
+
+```
+F6 = vstack([ [0,0,0,0],    # ωx
+              [0,0,0,0],    # ωy
+              [0,0,0,0],    # ωz ( already in Vb )
+              F ])          # vx vy ωz rows
+```
+
+#### 2.2  Mobile‑manipulator Jacobian
+
+Build once per call:
+
+```
+Tsb = ChassisToSE3(phi, x, y)           # from Milestone 1
+T0e = FKinBody(M0e, Blist, theta)
+Tse = Tsb @ Tb0 @ T0e
+
+# Base Jacobian columns (6×4)
+J_base = Adjoint(inv(T0e) @ inv(Tb0)) @ F6
+
+# Arm Jacobian columns (6×5)
+J_arm  = JacobianBody(Blist, theta)
+
+J_e = hstack([J_base, J_arm])           # 6×9
+```
+
+---
+
+### 3.  Control‑law equations you must implement
+
+1. **Feed‑forward twist**
+
+   ```
+   Vd = (1/dt) * se3ToVec( MatrixLog6(inv(X_desired) @ X_desired_next) )
+   ```
+
+2. **Configuration error (twist)**
+
+   ```
+   X_err = se3ToVec( MatrixLog6( inv(X_actual) @ X_desired ) )
+   ```
+
+3. **Integral update**
+
+   ```
+   integral_error_new = integral_error_prev + X_err * dt
+   ```
+
+4. **Commanded twist (body frame)**
+
+   ```
+   V_cmd = Adjoint( inv(X_actual) @ X_desired ) @ Vd \
+           + Kp @ X_err \
+           + Ki @ integral_error_new
+   ```
+
+5. **Wheel + joint rates**
+
+   ```
+   controls_raw = pinv(J_e, rcond=pinv_tolerance) @ V_cmd
+   controls = clip(controls_raw, -speed_limit, speed_limit)
+   ```
+
+Return `(V_cmd, controls, X_err, integral_error_new)`.
+
+---
+
+### 4.  Required gain choices for grading
+
+You **must** expose both gains as 6×6 diagonal matrices:
+
+```python
+Kp = diag([5,5,5,5,5,5])     # reasonable starting point
+Ki = diag([0,0,0,0,0,0])     # set to zero for initial tests
+```
+
+The autograder will test with several gain sets, so read `Kp` and `Ki` exactly as passed.
+
+---
+
+### 5.  Other implementation rules
+
+* Use the **ModernRobotics** routines for `Adjoint`, `MatrixLog6`, `se3ToVec`,
+  `JacobianBody`, and `FKinBody`.
+* Clamp speeds **before** calling `NextState`.
+* Do **not** integrate or filter inside `FeedbackControl`—all dynamics are handled
+  by your Milestone 1 `NextState`.
+* Keep a **module‑level (or class) variable** to store the running integral; the autograder
+  will call your function sequentially with the updated value you return.
+* Your code must run in plain Python 3 with only **NumPy** and the
+  **modern\_robotics.py** helper file supplied in Course 1.
+
+That's every numeric constant, matrix, tolerance, and gain interface the grader expects for Milestone 3.  Stick to this spec and your controller will plug cleanly into the rest of the capstone pipeline.
