@@ -287,8 +287,8 @@ python modern_robotics_sim/driver.py --milestone 2 --csv
 ```
 
 This will create `milestone2/eight_segment_traj.csv` using the **default cube configuration**:
-- **Initial cube pose**: `(1, 0, 0)` (x=1m, y=0m, θ=0°)
-- **Goal cube pose**: `(0, -1, -π/2)` (x=0m, y=-1m, θ=-90°)
+- **Initial cube pose**: x=1.0m, y=0.0m, θ=0 radians
+- **Goal cube pose**: x=0.0m, y=-1.0m, θ=-π/2 radians (-1.571 radians)
 
 For a **custom cube configuration**, you can edit the values in `driver.py` or create your own test script. For example:
 
@@ -296,8 +296,8 @@ For a **custom cube configuration**, you can edit the values in `driver.py` or c
 from modern_robotics_sim.trajectory_generator import TrajectoryGenerator
 
 # Custom configuration
-cube_initial = (0.5, 0.5, 0)      # x=0.5m, y=0.5m, θ=0°
-cube_goal = (-0.5, 0.5, np.pi/4)  # x=-0.5m, y=0.5m, θ=45°
+cube_initial = (0.5, 0.5, 0)           # x=0.5m, y=0.5m, θ=0 radians
+cube_goal = (-0.5, 0.5, np.pi/4)       # x=-0.5m, y=0.5m, θ=π/4 radians (0.785 radians)
 
 tg = TrajectoryGenerator()
 trajectory = tg.TrajectoryGenerator(
@@ -333,9 +333,10 @@ np.savetxt('milestone2/custom_trajectory.csv', trajectory, delimiter=',')
 5. **Click "Apply"** to confirm the changes
 
 **Coordinate conversion**:
-- Your trajectory uses `(x, y, θ)` where θ is rotation about Z-axis
+- Your trajectory uses `(x, y, θ)` where θ is rotation about Z-axis in radians
+- CoppeliaSim Scene 8 accepts: **x, y coordinates and θ (theta) in radians**
 - CoppeliaSim uses `(X, Y, Z)` position and `(α, β, γ)` Euler angles
-- Set **Z = 0.025** (cube rests on ground) and **γ = θ** (Z-rotation)
+- Set **Z = 0.025** (cube rests on ground) and **γ = θ** (Z-rotation in radians)
 
 #### Step 4: Verify the motion
 
@@ -602,8 +603,12 @@ The feedforward tests verify:
 
 1. **Load each CSV file** in CoppeliaSim Scene 8
 2. **Set cube positions** to match the trajectory assumptions:
-   - **Initial cube pose**: X=1.0m, Y=0.0m, Z=0.025m, γ=0°
-   - **Goal cube pose**: X=0.0m, Y=-1.0m, Z=0.025m, γ=-90°
+   - **Initial cube pose**: x=1.0m, y=0.0m, θ=0 radians
+   - **Goal cube pose**: x=0.0m, y=-1.0m, θ=-π/2 radians (-1.571 radians)
+   
+   **Note**: CoppeliaSim Scene 8 accepts cube configurations as **(x, y, θ)** where:
+   - **x, y**: Position coordinates in meters
+   - **θ (theta)**: Rotation angle in **radians** (not degrees)
 3. **Run the simulation** and observe the robot behavior
 
 #### Step 3: Expected Feedforward Control Behavior
