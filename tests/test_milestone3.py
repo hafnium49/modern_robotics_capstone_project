@@ -419,8 +419,8 @@ def test_feedback_control_import():
     X_actual = np.eye(4)
     X_desired = np.array([
         [1, 0, 0, 0.1],
-        [0, 1, 0, 0.1], 
-        [0, 0, 1, 0.1],
+        [0, 1, 0, 0.0],
+        [0, 0, 1, 0.0],
         [0, 0, 0, 1]
     ])
     X_desired_next = np.array([
@@ -1369,6 +1369,48 @@ def test_feedforward_vs_feedback_comparison():
     print("Feedforward vs feedback comparison test passed")
 
 
+def test_generate_feedforward_csv_files():
+    """Test that generates CSV and TXT files for feedforward control testing in CoppeliaSim.
+    
+    This test automatically creates all the necessary files in the milestone3_feedforward_tests
+    directory when pytest is run, making it easy to get the files for CoppeliaSim testing.
+    """
+    print("\nGenerating feedforward control test files...")
+    
+    # Generate all CSV files and the report
+    results = generate_comparison_csvs("milestone3_feedforward_tests")
+    
+    # Verify that files were created
+    output_dir = "milestone3_feedforward_tests"
+    expected_files = [
+        "feedforward_perfect_initial.csv",
+        "feedforward_small_error.csv", 
+        "feedforward_medium_error.csv",
+        "feedforward_large_error.csv",
+        "feedforward_test_report.txt"
+    ]
+    
+    # Check that all expected files exist
+    for filename in expected_files:
+        filepath = os.path.join(output_dir, filename)
+        assert os.path.exists(filepath), f"Expected file {filepath} was not created"
+        
+        # Verify CSV files have content
+        if filename.endswith('.csv'):
+            assert os.path.getsize(filepath) > 0, f"CSV file {filepath} is empty"
+    
+    # Verify that results dictionary contains expected test cases
+    expected_cases = ["perfect_initial", "small_error", "medium_error", "large_error"]
+    for case in expected_cases:
+        assert case in results, f"Missing test case: {case}"
+        assert results[case] is not None, f"No data for test case: {case}"
+        assert len(results[case]) > 0, f"Empty data for test case: {case}"
+    
+    print(f"✅ Successfully generated {len(expected_files)} feedforward test files")
+    print(f"📁 Files saved in: {output_dir}/")
+    print("🎯 Ready for CoppeliaSim Scene 8 testing!")
+
+
 if __name__ == "__main__":
     print("Running Milestone 3 tests...")
     print("=" * 60)
@@ -1398,6 +1440,11 @@ if __name__ == "__main__":
     test_feedforward_trajectory_following()
     test_feedforward_vs_feedback_comparison()
     
+    # Generate CSV files for CoppeliaSim testing
+    print("\nCSV FILE GENERATION")
+    print("-" * 30)
+    test_generate_feedforward_csv_files()
+    
     # Integration tests
     print("\nINTEGRATION TESTS")
     print("-" * 30)
@@ -1410,4 +1457,5 @@ if __name__ == "__main__":
     print("✓ Feedforward-only control with initial end-effector errors")
     print("✓ Trajectory following with different speed limits")
     print("✓ Comparison of feedforward vs feedback control")
+    print("✓ CSV files generated for CoppeliaSim testing")
     print("\nThe implementation is ready for CoppeliaSim testing!")
