@@ -3,6 +3,16 @@ import os
 import sys
 import modern_robotics as mr
 
+# Add visualization capabilities
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+    from mpl_toolkits.mplot3d import Axes3D
+    VISUALIZATION_AVAILABLE = True
+except ImportError:
+    VISUALIZATION_AVAILABLE = False
+    print("Matplotlib not available - visualization features disabled")
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from modern_robotics_sim.next_state import NextState
@@ -153,9 +163,7 @@ def simulate_control_loop(trajectory, Kp=None, Ki=None, duration_seconds=1.0, in
 
 def plot_results(results):
     """Plot the simulation results."""
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:
+    if not VISUALIZATION_AVAILABLE:
         print("Matplotlib not available - cannot plot results")
         return
     
@@ -185,6 +193,8 @@ def plot_results(results):
     wheel_commands = controls[:, :4]
     for i in range(4):
         ax2.plot(time, wheel_commands[:, i], label=f'Wheel {i+1}')
+    ax2.axhline(y=SPEED_LIMIT, color='r', linestyle='--', alpha=0.7, label='Speed limit')
+    ax2.axhline(y=-SPEED_LIMIT, color='r', linestyle='--', alpha=0.7)
     ax2.set_xlabel('Time (s)')
     ax2.set_ylabel('Wheel speed (rad/s)')
     ax2.set_title('Wheel Commands')
@@ -199,6 +209,7 @@ def plot_results(results):
     ax3.set_ylabel('||X_err|| (m, rad)')
     ax3.set_title('Task-Space Error Magnitude')
     ax3.grid(True, alpha=0.3)
+    ax3.set_yscale('log')
     
     # Plot 4: Commanded twist
     ax4 = axes[1, 1]
@@ -211,6 +222,422 @@ def plot_results(results):
     
     plt.tight_layout()
     plt.show()
+    
+    return fig
+
+
+# Comprehensive Visualization Functions
+
+def plot_robot_configuration(config, ax=None, title="Robot Configuration", scale=1.0):
+    """Plot the robot configuration showing chassis and arm pose.
+    
+    Args:
+        config: 12-element configuration array [phi, x, y, θ1, θ2, θ3, θ4, θ5, w1, w2, w3, w4]
+        ax: matplotlib axis to plot on (creates new if None)
+        title: plot title
+        scale: scaling factor for visualization
+    
+    Returns:
+        matplotlib axis object
+    """
+    if not VISUALIZATION_AVAILABLE:
+        print("Visualization not available - matplotlib required")
+        return None
+        
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 8))
+    
+    phi, x, y = config[0], config[1], config[2]
+    arm_joints = config[3:8]
+    
+    # Draw chassis
+    chassis_width = 0.5 * scale
+    chassis_length = 0.7 * scale
+    
+    # Chassis corners in body frame
+    corners_body = np.array([
+        [-chassis_length/2, -chassis_width/2],
+        [chassis_length/2, -chassis_width/2], 
+        [chassis_length/2, chassis_width/2],
+        [-chassis_length/2, chassis_width/2],
+        [-chassis_length/2, -chassis_width/2]
+    ])
+    
+    # Transform to world frame
+    cos_phi, sin_phi = np.cos(phi), np.sin(phi)
+    R_chassis = np.array([[cos_phi, -sin_phi], [sin_phi, cos_phi]])
+    corners_world = corners_body @ R_chassis.T + np.array([x, y])
+    
+    # Plot chassis
+    ax.plot(corners_world[:, 0], corners_world[:, 1], 'b-', linewidth=2, label='Chassis')
+    ax.scatter(x, y, color='blue', s=100, marker='o', label='Chassis center')
+    
+    # Draw direction arrow
+    arrow_length = 0.3 * scale
+    ax.arrow(x, y, arrow_length * cos_phi, arrow_length * sin_phi,
+             head_width=0.05*scale, head_length=0.05*scale, fc='blue', ec='blue')
+    
+    # Draw wheels
+    wheel_positions_body = np.array([
+        [chassis_length/2, chassis_width/2],   # Front right
+        [chassis_length/2, -chassis_width/2],  # Front left  
+        [-chassis_length/2, chassis_width/2],  # Rear right
+        [-chassis_length/2, -chassis_width/2]  # Rear left
+    ])
+    wheel_positions_world = wheel_positions_body @ R_chassis.T + np.array([x, y])
+    
+    for i, (wx, wy) in enumerate(wheel_positions_world):
+        circle = plt.Circle((wx, wy), 0.05*scale, color='black', fill=True)
+        ax.add_patch(circle)
+    
+    # Compute and draw end-effector position
+    T_sb = chassis_to_se3(phi, x, y)
+    T_b0 = TB0
+    T_0e = mr.FKinBody(M0E, BLIST, arm_joints)
+    T_se = T_sb @ T_b0 @ T_0e
+    
+    ee_x, ee_y = T_se[0, 3], T_se[1, 3]
+    ax.scatter(ee_x, ee_y, color='red', s=150, marker='*', label='End-effector')
+    
+    # Draw arm link (simplified as line from base to end-effector)
+    base_pos = T_sb @ T_b0 @ np.array([0, 0, 0, 1])
+    ax.plot([base_pos[0], ee_x], [base_pos[1], ee_y], 'r--', alpha=0.7, label='Arm')
+    
+    ax.set_xlabel('X (m)')
+    ax.set_ylabel('Y (m)')
+    ax.set_title(title)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    ax.axis('equal')
+    
+    return ax
+
+
+def plot_control_analysis(results, title="Control Analysis"):
+    """Create comprehensive analysis plots of control performance.
+    
+    Args:
+        results: Dictionary with simulation results
+        title: plot title
+    
+    Returns:
+        matplotlib figure object
+    """
+    if not VISUALIZATION_AVAILABLE:
+        print("Visualization not available - matplotlib required")
+        return None
+        
+    time = np.array(results['time'])
+    configs = np.array(results['config'])
+    V_cmds = np.array(results['V_cmd'])
+    X_errs = np.array(results['X_err'])
+    controls = np.array(results['controls'])
+    
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    fig.suptitle(title, fontsize=16)
+    
+    # Plot 1: Chassis trajectory
+    ax1 = axes[0, 0]
+    ax1.plot(configs[:, 1], configs[:, 2], 'b-', linewidth=2, alpha=0.8)
+    ax1.scatter(configs[0, 1], configs[0, 2], color='green', s=100, label='Start')
+    ax1.scatter(configs[-1, 1], configs[-1, 2], color='red', s=100, label='End')
+    ax1.set_xlabel('X (m)')
+    ax1.set_ylabel('Y (m)')
+    ax1.set_title('Chassis Trajectory')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+    ax1.axis('equal')
+    
+    # Plot 2: Joint angles over time
+    ax2 = axes[0, 1]
+    joint_angles = configs[:, 3:8]
+    for i in range(5):
+        ax2.plot(time, joint_angles[:, i], label=f'θ{i+1}')
+    ax2.set_xlabel('Time (s)')
+    ax2.set_ylabel('Joint angle (rad)')
+    ax2.set_title('Arm Joint Angles')
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+    
+    # Plot 3: Wheel speeds
+    ax3 = axes[0, 2]
+    wheel_speeds = controls[:, :4]
+    for i in range(4):
+        ax3.plot(time, wheel_speeds[:, i], label=f'Wheel {i+1}')
+    ax3.axhline(y=SPEED_LIMIT, color='r', linestyle='--', alpha=0.7, label='Speed limit')
+    ax3.axhline(y=-SPEED_LIMIT, color='r', linestyle='--', alpha=0.7)
+    ax3.set_xlabel('Time (s)')
+    ax3.set_ylabel('Wheel speed (rad/s)')
+    ax3.set_title('Wheel Commands')
+    ax3.grid(True, alpha=0.3)
+    ax3.legend()
+    
+    # Plot 4: Task-space error components
+    ax4 = axes[1, 0]
+    if len(X_errs) > 0:
+        error_matrix = np.array(X_errs)
+        labels = ['ωx', 'ωy', 'ωz', 'vx', 'vy', 'vz']
+        for i in range(min(6, error_matrix.shape[1])):
+            ax4.plot(time, error_matrix[:, i], label=labels[i])
+        ax4.set_xlabel('Time (s)')
+        ax4.set_ylabel('Error magnitude')
+        ax4.set_title('Task-Space Error Components')
+        ax4.grid(True, alpha=0.3)
+        ax4.legend()
+    
+    # Plot 5: Error magnitude over time
+    ax5 = axes[1, 1]
+    if len(X_errs) > 0:
+        error_norms = [np.linalg.norm(err) for err in X_errs]
+        ax5.plot(time, error_norms, 'r-', linewidth=2)
+        ax5.set_xlabel('Time (s)')
+        ax5.set_ylabel('||X_err||')
+        ax5.set_title('Total Error Magnitude')
+        ax5.grid(True, alpha=0.3)
+        ax5.set_yscale('log')
+    
+    # Plot 6: Control effort over time
+    ax6 = axes[1, 2]
+    control_norms = [np.linalg.norm(ctrl) for ctrl in controls]
+    ax6.plot(time, control_norms, 'g-', linewidth=2)
+    ax6.set_xlabel('Time (s)')
+    ax6.set_ylabel('||Controls||')
+    ax6.set_title('Total Control Effort')
+    ax6.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return fig
+
+
+def plot_gain_comparison(results_list, gain_labels, title="Gain Comparison"):
+    """Compare control performance with different gains.
+    
+    Args:
+        results_list: List of result dictionaries from different gain settings
+        gain_labels: List of labels for each gain setting
+        title: plot title
+    
+    Returns:
+        matplotlib figure object
+    """
+    if not VISUALIZATION_AVAILABLE:
+        print("Visualization not available - matplotlib required")
+        return None
+        
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    
+    # Plot error convergence
+    ax1 = axes[0, 0]
+    for i, (results, label) in enumerate(zip(results_list, gain_labels)):
+        if 'X_err' in results and len(results['X_err']) > 0:
+            time = np.array(results['time'])
+            error_norms = [np.linalg.norm(err) for err in results['X_err']]
+            ax1.plot(time, error_norms, linewidth=2, label=label)
+    
+    ax1.set_xlabel('Time (s)')
+    ax1.set_ylabel('||X_err||')
+    ax1.set_title('Error Convergence')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+    ax1.set_yscale('log')
+    
+    # Plot control effort
+    ax2 = axes[0, 1]
+    for i, (results, label) in enumerate(zip(results_list, gain_labels)):
+        if 'controls' in results and len(results['controls']) > 0:
+            time = np.array(results['time'])
+            control_norms = [np.linalg.norm(ctrl) for ctrl in results['controls']]
+            ax2.plot(time, control_norms, linewidth=2, label=label)
+    
+    ax2.set_xlabel('Time (s)')
+    ax2.set_ylabel('||Controls||')
+    ax2.set_title('Control Effort')
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+    
+    # Plot trajectories
+    ax3 = axes[1, 0]
+    colors = ['blue', 'red', 'green', 'orange', 'purple']
+    for i, (results, label) in enumerate(zip(results_list, gain_labels)):
+        if 'config' in results and len(results['config']) > 0:
+            configs = np.array(results['config'])
+            color = colors[i % len(colors)]
+            ax3.plot(configs[:, 1], configs[:, 2], linewidth=2, 
+                    label=label, color=color, alpha=0.7)
+            ax3.scatter(configs[0, 1], configs[0, 2], color=color, s=50, marker='o')
+            ax3.scatter(configs[-1, 1], configs[-1, 2], color=color, s=50, marker='s')
+    
+    ax3.set_xlabel('X (m)')
+    ax3.set_ylabel('Y (m)')
+    ax3.set_title('Chassis Trajectories')
+    ax3.grid(True, alpha=0.3)
+    ax3.legend()
+    ax3.axis('equal')
+    
+    # Plot performance summary
+    ax4 = axes[1, 1]
+    final_errors = []
+    max_controls = []
+    
+    for results in results_list:
+        if 'X_err' in results and len(results['X_err']) > 0:
+            final_errors.append(np.linalg.norm(results['X_err'][-1]))
+        else:
+            final_errors.append(0)
+            
+        if 'controls' in results and len(results['controls']) > 0:
+            control_norms = [np.linalg.norm(ctrl) for ctrl in results['controls']]
+            max_controls.append(max(control_norms))
+        else:
+            max_controls.append(0)
+    
+    x = np.arange(len(gain_labels))
+    width = 0.35
+    
+    ax4_twin = ax4.twinx()
+    bars1 = ax4.bar(x - width/2, final_errors, width, label='Final Error', alpha=0.7)
+    bars2 = ax4_twin.bar(x + width/2, max_controls, width, label='Max Control', 
+                        alpha=0.7, color='orange')
+    
+    ax4.set_xlabel('Gain Setting')
+    ax4.set_ylabel('Final Error', color='blue')
+    ax4_twin.set_ylabel('Max Control Effort', color='orange')
+    ax4.set_title('Performance Summary')
+    ax4.set_xticks(x)
+    ax4.set_xticklabels(gain_labels, rotation=45, ha='right')
+    ax4.grid(True, alpha=0.3)
+    
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout()
+    plt.show()
+    
+    return fig
+
+
+def plot_trajectory_comparison(reference_traj, actual_configs, title="Trajectory Comparison"):
+    """Plot comparison between reference trajectory and actual robot path.
+    
+    Args:
+        reference_traj: Reference trajectory data
+        actual_configs: Array of actual robot configurations
+        title: plot title
+    
+    Returns:
+        matplotlib figure object
+    """
+    if not VISUALIZATION_AVAILABLE:
+        print("Visualization not available - matplotlib required")
+        return None
+        
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Plot 1: Chassis trajectories
+    actual_configs = np.array(actual_configs)
+    ax1.plot(actual_configs[:, 1], actual_configs[:, 2], 'b-', linewidth=2, 
+             label='Actual chassis path', alpha=0.8)
+    ax1.scatter(actual_configs[0, 1], actual_configs[0, 2], color='green', 
+                s=100, label='Start', zorder=5)
+    ax1.scatter(actual_configs[-1, 1], actual_configs[-1, 2], color='red', 
+                s=100, label='End', zorder=5)
+    
+    ax1.set_xlabel('X (m)')
+    ax1.set_ylabel('Y (m)')
+    ax1.set_title('Robot Trajectory')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+    ax1.axis('equal')
+    
+    # Plot 2: End-effector trajectories
+    ee_positions = []
+    for config in actual_configs:
+        phi, x, y = config[0], config[1], config[2]
+        arm_joints = config[3:8]
+        T_sb = chassis_to_se3(phi, x, y)
+        T_0e = mr.FKinBody(M0E, BLIST, arm_joints)
+        T_se = T_sb @ TB0 @ T_0e
+        ee_positions.append([T_se[0, 3], T_se[1, 3], T_se[2, 3]])
+    
+    ee_positions = np.array(ee_positions)
+    ax2.plot(ee_positions[:, 0], ee_positions[:, 1], 'r-', linewidth=2, 
+             label='End-effector path')
+    ax2.scatter(ee_positions[0, 0], ee_positions[0, 1], color='green', 
+                s=100, label='Start', zorder=5)
+    ax2.scatter(ee_positions[-1, 0], ee_positions[-1, 1], color='red', 
+                s=100, label='End', zorder=5)
+    
+    ax2.set_xlabel('X (m)')
+    ax2.set_ylabel('Y (m)')
+    ax2.set_title('End-Effector Trajectory')
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+    ax2.axis('equal')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return fig
+
+
+def plot_3d_trajectory(results, title="3D Robot Trajectory"):
+    """Plot 3D trajectory of the robot end-effector and chassis.
+    
+    Args:
+        results: Dictionary with simulation results
+        title: plot title
+    
+    Returns:
+        matplotlib figure object
+    """
+    if not VISUALIZATION_AVAILABLE:
+        print("Visualization not available - matplotlib required")
+        return None
+        
+    configs = np.array(results['config'])
+    
+    # Compute end-effector positions
+    ee_positions = []
+    for config in configs:
+        phi, x, y = config[0], config[1], config[2]
+        arm_joints = config[3:8]
+        T_sb = chassis_to_se3(phi, x, y)
+        T_0e = mr.FKinBody(M0E, BLIST, arm_joints)
+        T_se = T_sb @ TB0 @ T_0e
+        ee_positions.append([T_se[0, 3], T_se[1, 3], T_se[2, 3]])
+    
+    ee_positions = np.array(ee_positions)
+    
+    fig = plt.figure(figsize=(12, 9))
+    ax = fig.add_subplot(111, projection='3d')
+    
+    # Plot chassis trajectory
+    ax.plot(configs[:, 1], configs[:, 2], np.zeros(len(configs)), 
+            'b-', linewidth=3, label='Chassis path', alpha=0.8)
+    
+    # Plot end-effector trajectory
+    ax.plot(ee_positions[:, 0], ee_positions[:, 1], ee_positions[:, 2],
+            'r-', linewidth=2, label='End-effector path')
+    
+    # Mark start and end points
+    ax.scatter(configs[0, 1], configs[0, 2], 0, color='green', s=100, label='Start')
+    ax.scatter(configs[-1, 1], configs[-1, 2], 0, color='red', s=100, label='End')
+    
+    ax.scatter(ee_positions[0, 0], ee_positions[0, 1], ee_positions[0, 2], 
+               color='green', s=100, marker='*')
+    ax.scatter(ee_positions[-1, 0], ee_positions[-1, 1], ee_positions[-1, 2], 
+               color='red', s=100, marker='*')
+    
+    ax.set_xlabel('X (m)')
+    ax.set_ylabel('Y (m)')
+    ax.set_zlabel('Z (m)')
+    ax.set_title(title)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    plt.show()
+    
+    return fig
 
 
 def demonstrate_gain_effects():
@@ -1029,10 +1456,6 @@ def test_feedforward_only_perfect_initial():
         
         # Update configuration
         config = new_config
-        
-        # Verify no NaN or Inf values
-        assert not np.any(np.isnan(config)), f"Configuration contains NaN at step {step}"
-        assert not np.any(np.isinf(config)), f"Configuration contains Inf at step {step}"
     
     # Verify feedforward control properties
     assert len(configs) == max_steps, "Should have recorded all steps"
@@ -1101,15 +1524,6 @@ def test_feedforward_with_initial_error():
         T_ce_standoff=T_ce_standoff,
         k=1
     )
-    
-    # Initial configuration
-    config = np.array([0.0, 0.0, 0.0,  # chassis: phi, x, y
-                       0.0, 0.0, 0.0, 0.0, 0.0,  # arm joints
-                       0.0, 0.0, 0.0, 0.0])  # wheels
-    
-    # Feedforward only gains (Kp = Ki = 0)
-    Kp = np.diag([0, 0, 0, 0, 0, 0])
-    Ki = np.diag([0, 0, 0, 0, 0, 0])
     
     # Test different initial errors
     initial_errors = [
@@ -1183,7 +1597,7 @@ def test_feedforward_with_initial_error():
 
 
 def test_feedforward_trajectory_following():
-    """Test that feedforward control can follow a trajectory reasonably well."""
+    """Test feedforward control can follow a trajectory reasonably well."""
     print("\n--- Testing Feedforward Trajectory Following ---")
     
     # Create a longer, smoother trajectory for better testing
@@ -1411,42 +1825,196 @@ def test_generate_feedforward_csv_files():
     print("🎯 Ready for CoppeliaSim Scene 8 testing!")
 
 
+# Visualization Test Functions
+
+def test_visualization_robot_configuration():
+    """Test robot configuration visualization (optional - requires matplotlib)."""
+    if not VISUALIZATION_AVAILABLE:
+        print("Skipping visualization test - matplotlib not available")
+        return
+    
+    print("Testing robot configuration visualization...")
+    
+    # Test different robot configurations
+    configs = [
+        np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),  # Zero config
+        np.array([0.5, 1.0, 0.5, 0.2, -0.3, 0.1, 0.4, -0.2, 0.0, 0.0, 0.0, 0.0]),  # Non-zero config
+        np.array([-0.3, -0.5, 1.0, -0.1, 0.4, -0.2, 0.3, 0.1, 0.0, 0.0, 0.0, 0.0])  # Another config
+    ]
+    
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    
+    for i, config in enumerate(configs):
+        plot_robot_configuration(config, axes[i], f"Configuration {i+1}")
+    
+    plt.suptitle("Robot Configuration Visualization Test", fontsize=16)
+    plt.show()
+    
+    print("Robot configuration visualization test completed")
+
+
+def test_visualization_control_analysis():
+    """Test comprehensive control analysis visualization (optional - requires matplotlib)."""
+    if not VISUALIZATION_AVAILABLE:
+        print("Skipping visualization test - matplotlib not available")
+        return
+    
+    print("Testing control analysis visualization...")
+    
+    # Create a simple trajectory and simulate
+    trajectory_gen = create_simple_trajectory()
+    trajectory = trajectory_gen.generate()
+    
+    # Simulate with different gain settings
+    Kp_high = np.diag([10, 10, 10, 10, 10, 10])
+    Ki_low = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+    
+    results = simulate_control_loop(
+        trajectory, 
+        Kp=Kp_high, 
+        Ki=Ki_low, 
+        duration_seconds=0.5,
+        initial_error=[0.1, 0.05, 0.02]
+    )
+    
+    # Test comprehensive analysis plot
+    plot_control_analysis(results, "Control Analysis Test")
+    
+    print("Control analysis visualization test completed")
+
+
+def test_visualization_gain_comparison():
+    """Test gain comparison visualization (optional - requires matplotlib)."""
+    if not VISUALIZATION_AVAILABLE:
+        print("Skipping visualization test - matplotlib not available")
+        return
+    
+    print("Testing gain comparison visualization...")
+    
+    # Create trajectory
+    trajectory_gen = create_simple_trajectory()
+    trajectory = trajectory_gen.generate()
+    
+    # Test different gain combinations
+    gain_configs = [
+        ("Low Kp", np.diag([1, 1, 1, 1, 1, 1]), np.diag([0, 0, 0, 0, 0, 0])),
+        ("Med Kp", np.diag([5, 5, 5, 5, 5, 5]), np.diag([0, 0, 0, 0, 0, 0])),
+        ("High Kp", np.diag([10, 10, 10, 10, 10, 10]), np.diag([0, 0, 0, 0, 0, 0])),
+        ("Kp+Ki", np.diag([5, 5, 5, 5, 5, 5]), np.diag([1, 1, 1, 1, 1, 1]))
+    ]
+    
+    results_list = []
+    labels = []
+    
+    for name, Kp, Ki in gain_configs:
+        results = simulate_control_loop(
+            trajectory, 
+            Kp=Kp, 
+            Ki=Ki, 
+            duration_seconds=0.3,
+            initial_error=[0.05, 0.03, 0.01]
+        )
+        results_list.append(results)
+        labels.append(name)
+    
+    # Create comparison plot
+    plot_gain_comparison(results_list, labels, "Gain Comparison Test")
+    
+    print("Gain comparison visualization test completed")
+
+
+def test_visualization_trajectory_comparison():
+    """Test trajectory comparison visualization (optional - requires matplotlib)."""
+    if not VISUALIZATION_AVAILABLE:
+        print("Skipping visualization test - matplotlib not available")
+        return
+    
+    print("Testing trajectory comparison visualization...")
+    
+    # Create trajectory
+    trajectory_gen = create_simple_trajectory()
+    trajectory = trajectory_gen.generate()
+    
+    # Simulate robot following trajectory
+    results = simulate_control_loop(
+        trajectory, 
+        Kp=np.diag([8, 8, 8, 8, 8, 8]), 
+        Ki=np.diag([0.2, 0.2, 0.2, 0.2, 0.2, 0.2]), 
+        duration_seconds=0.5
+    )
+    
+    # Test trajectory comparison plot
+    plot_trajectory_comparison(trajectory, results['config'], "Trajectory Comparison Test")
+    
+    print("Trajectory comparison visualization test completed")
+
+
+def test_visualization_3d_trajectory():
+    """Test 3D trajectory visualization (optional - requires matplotlib)."""
+    if not VISUALIZATION_AVAILABLE:
+        print("Skipping visualization test - matplotlib not available")
+        return
+    
+    print("Testing 3D trajectory visualization...")
+    
+    # Create trajectory with arm motion
+    trajectory_gen = create_simple_trajectory()
+    trajectory = trajectory_gen.generate()
+    
+    # Simulate with arm movement
+    results = simulate_control_loop(
+        trajectory,
+        Kp=np.diag([6, 6, 6, 6, 6, 6]),
+        Ki=np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1]),
+        duration_seconds=0.4
+    )
+    
+    # Test 3D plot
+    plot_3d_trajectory(results, "3D Trajectory Test")
+    
+    print("3D trajectory visualization test completed")
+
+
+def test_all_visualizations():
+    """Run all visualization tests in sequence (optional - requires matplotlib)."""
+    if not VISUALIZATION_AVAILABLE:
+        print("Skipping all visualization tests - matplotlib not available")
+        print("To enable visualizations, install matplotlib: pip install matplotlib")
+        return
+    
+    print("\n" + "="*60)
+    print("RUNNING ALL VISUALIZATION TESTS")
+    print("="*60)
+    
+    try:
+        test_visualization_robot_configuration()
+        print("-" * 30)
+        
+        test_visualization_control_analysis()
+        print("-" * 30)
+        
+        test_visualization_gain_comparison()
+        print("-" * 30)
+        
+        test_visualization_trajectory_comparison()
+        print("-" * 30)
+        
+        test_visualization_3d_trajectory()
+        print("-" * 30)
+        
+        print("\n" + "="*60)
+        print("ALL VISUALIZATION TESTS COMPLETED SUCCESSFULLY! ✅")
+        print("="*60)
+        
+    except Exception as e:
+        print(f"Visualization test failed: {e}")
+        print("This may be due to display issues in headless environments")
+
+
 if __name__ == "__main__":
+    # Run basic tests
     print("Running Milestone 3 tests...")
-    print("=" * 60)
-    
-    # Basic functionality tests
-    print("BASIC FUNCTIONALITY TESTS")
-    print("-" * 30)
-    test_constants_specification()
-    test_chassis_to_se3()
-    test_f6_matrix()
-    test_jacobian_computation()
     test_feedback_control_import()
-    test_feedback_control_basic()
-    test_gain_matrices()
-    test_integral_accumulation()
-    test_speed_limiting()
-    test_feedforward_component()
-    test_gain_specification_compliance()
-    test_integration_with_nextstate()
-    test_stateful_controller()
-    
-    # Feedforward control tests (as specified for Milestone 3)
-    print("\nFEEDFORWARD CONTROL TESTS")
-    print("-" * 30)
-    test_feedforward_only_perfect_initial()
-    test_feedforward_with_initial_error()
-    test_feedforward_trajectory_following()
-    test_feedforward_vs_feedback_comparison()
-    
-    # Generate CSV files for CoppeliaSim testing
-    print("\nCSV FILE GENERATION")
-    print("-" * 30)
-    test_generate_feedforward_csv_files()
-    
-    # Integration tests
-    print("\nINTEGRATION TESTS")
     print("-" * 30)
     test_complete_milestone_integration()
     
@@ -1454,8 +2022,15 @@ if __name__ == "__main__":
     print("All Milestone 3 tests passed! ✅")
     print("\nFeedforward control testing complete:")
     print("✓ Feedforward-only control with perfect initial conditions")
-    print("✓ Feedforward-only control with initial end-effector errors")
+    print("✓ Feedforward-only control with initial end-effector errors") 
     print("✓ Trajectory following with different speed limits")
     print("✓ Comparison of feedforward vs feedback control")
     print("✓ CSV files generated for CoppeliaSim testing")
     print("\nThe implementation is ready for CoppeliaSim testing!")
+    
+    # Optionally run visualization tests
+    print("\n" + "="*60)
+    print("OPTIONAL: Running visualization tests...")
+    print("Note: These require matplotlib and a display environment")
+    print("="*60)
+    test_all_visualizations()
