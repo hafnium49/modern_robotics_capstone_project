@@ -19,7 +19,7 @@ Expected Results:
 - medium_error: Larger deviation, may not grasp cube perfectly
 - large_error: Significant deviation, likely to miss cube
 
-Key Observations to Make:
+Key Observations:
 - Feedforward control cannot correct for initial errors
 - Errors persist throughout the trajectory
 - Larger initial errors lead to larger trajectory deviations
