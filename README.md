@@ -532,11 +532,17 @@ You have two options for testing feedforward control:
 **Option 1: Run automated tests**
 ```bash
 # Run all Milestone 3 tests including feedforward tests
-pytest tests/test_milestone3.py -v
+python -m pytest tests/test_milestone3.py -v
 
 # Run only the feedforward control tests
-pytest tests/test_milestone3.py -k "feedforward" -v
+python -m pytest tests/test_milestone3.py -k "feedforward" -v
 ```
+
+This will automatically:
+- Run 19 comprehensive tests (18 validation tests + 1 CSV generation test)
+- Generate CSV files for different initial error conditions in `milestone3_feedforward_tests/`
+- Create a comprehensive test report with CoppeliaSim instructions
+- Verify all functionality and file generation
 
 **Option 2: Execute feedback control module manually**
 
@@ -564,15 +570,7 @@ python -m modern_robotics_sim.feedback_control --feedforward-test --initial-erro
 python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0.2 0.1 0.05
 ```
 
-The feedforward tests verify:
-- **Perfect initial conditions**: Feedforward control with no initial error
-- **Initial end-effector errors**: How feedforward control handles various initial position errors
-- **Trajectory following**: Feedforward control's ability to follow reference trajectories
-- **Comparison with feedback**: Behavior differences between feedforward-only and feedforward+feedback control
-
-#### Step 2: Generate CSV Files for CoppeliaSim Testing
-
-Use the utility functions to generate CSV files for visual verification in CoppeliaSim Scene 8:
+Alternatively, generate CSV files using the utility function:
 
 ```python
 # Generate feedforward test CSV files
@@ -582,18 +580,25 @@ sys.path.append('tests')
 from test_milestone3 import generate_comparison_csvs
 
 # Generate multiple test scenarios
-results = generate_comparison_csvs('feedforward_test_outputs')
+results = generate_comparison_csvs('milestone3_feedforward_tests')
 print('Generated feedforward control test files')
 "
 ```
 
-This creates CSV files for different initial error conditions:
+Both options create CSV files for different initial error conditions:
 - `feedforward_perfect_initial.csv` - Perfect initial end-effector position
 - `feedforward_small_error.csv` - Small initial error (5cm translation)
 - `feedforward_medium_error.csv` - Medium initial error (10cm translation)  
 - `feedforward_large_error.csv` - Large initial error (20cm translation)
+- `feedforward_test_report.txt` - Comprehensive testing instructions
 
-#### Step 3: Test in CoppeliaSim Scene 8
+The feedforward tests verify:
+- **Perfect initial conditions**: Feedforward control with no initial error
+- **Initial end-effector errors**: How feedforward control handles various initial position errors
+- **Trajectory following**: Feedforward control's ability to follow reference trajectories
+- **Comparison with feedback**: Behavior differences between feedforward-only and feedforward+feedback control
+
+#### Step 2: Test in CoppeliaSim Scene 8
 
 1. **Load each CSV file** in CoppeliaSim Scene 8
 2. **Set cube positions** to match the trajectory assumptions:
@@ -601,7 +606,7 @@ This creates CSV files for different initial error conditions:
    - **Goal cube pose**: X=0.0m, Y=-1.0m, Z=0.025m, γ=-90°
 3. **Run the simulation** and observe the robot behavior
 
-#### Step 4: Expected Feedforward Control Behavior
+#### Step 3: Expected Feedforward Control Behavior
 
 **Key observations you should make:**
 
@@ -617,7 +622,7 @@ This creates CSV files for different initial error conditions:
 - **Medium error (10cm)**: Larger deviation, may not grasp cube perfectly
 - **Large error (20cm)**: Significant deviation, likely to miss cube entirely
 
-#### Step 5: Add Feedback Control Gains
+#### Step 4: Add Feedback Control Gains
 
 After verifying feedforward behavior, test with non-zero feedback gains:
 
@@ -636,7 +641,7 @@ Ki = np.diag([1, 1, 1, 1, 1, 1])    # Add integral action
 - **Steady-state accuracy**: Better final positioning accuracy
 - **Disturbance rejection**: Ability to handle unexpected perturbations
 
-#### Step 6: Analyze Control Performance
+#### Step 5: Analyze Control Performance
 
 Use the plotting and analysis utilities to understand control behavior:
 
