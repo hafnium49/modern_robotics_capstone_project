@@ -421,7 +421,7 @@ $$
 You need its **pseudo‑inverse** once per cycle:
 
 $$
-F = (H^{(0)})^{\#}      \qquad\text{(3 × 4 → gives planar twist from wheel rates)}
+F = (H^{(0)})^{\dagger}      \qquad\text{(3 × 4 → gives planar twist from wheel rates)}
 $$
 
 Embed that in 6‑D:
@@ -527,14 +527,41 @@ To verify your Milestone 3 implementation and understand the behavior of feedfor
 
 #### Step 1: Run Feedforward Control Tests
 
-The test suite includes specialized feedforward control tests that verify the behavior described in the Milestone 3 requirements:
+You have two options for testing feedforward control:
 
+**Option 1: Run automated tests**
 ```bash
 # Run all Milestone 3 tests including feedforward tests
 pytest tests/test_milestone3.py -v
 
 # Run only the feedforward control tests
 pytest tests/test_milestone3.py -k "feedforward" -v
+```
+
+**Option 2: Execute feedback control module manually**
+
+Run the feedback control module directly to test feedforward behavior:
+
+```bash
+python -m modern_robotics_sim.feedback_control --feedforward-test
+```
+
+This will run a demonstration of feedforward control with various initial error conditions and generate CSV files for CoppeliaSim testing.
+
+For custom feedforward testing scenarios:
+
+```bash
+# Test feedforward with perfect initial conditions
+python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0 0 0
+
+# Test feedforward with small initial error (5cm translation)
+python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0.05 0.02 0.01
+
+# Test feedforward with medium initial error (10cm translation)  
+python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0.1 0.05 0.02
+
+# Test feedforward with large initial error (20cm translation)
+python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0.2 0.1 0.05
 ```
 
 The feedforward tests verify:
