@@ -537,54 +537,74 @@ python -m pytest tests/test_milestone3.py -v
 
 # Run only the feedforward control tests
 python -m pytest tests/test_milestone3.py -k "feedforward" -v
+
+# Run visualization tests (requires matplotlib)
+python -m pytest tests/test_milestone3.py -k "visualization" -v
 ```
 
 This will automatically:
-- Run 19 comprehensive tests (18 validation tests + 1 CSV generation test)
+- Run 25 comprehensive tests (18 validation tests + 6 visualization tests + 1 CSV generation test)
 - Generate CSV files for different initial error conditions in `milestone3_feedforward_tests/`
-- Create a comprehensive test report with CoppeliaSim instructions
+- Create comprehensive visualizations showing control behavior
 - Verify all functionality and file generation
 
-**Option 2: Execute feedback control module manually**
+**Option 2: Execute feedback control module manually with visualization**
 
-Run the feedback control module directly to test feedforward behavior:
-
-```bash
-python -m modern_robotics_sim.feedback_control --feedforward-test
-```
-
-This will run a demonstration of feedforward control with various initial error conditions and generate CSV files for CoppeliaSim testing.
-
-For custom feedforward testing scenarios:
+Run the feedback control module directly to test feedforward behavior with comprehensive visualizations:
 
 ```bash
-# Test feedforward with perfect initial conditions
-python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0 0 0
+# Run with automatic visualization
+python -m modern_robotics_sim.feedback_control --feedforward-test --visualize
 
-# Test feedforward with small initial error (5cm translation)
-python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0.05 0.02 0.01
-
-# Test feedforward with medium initial error (10cm translation)  
-python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0.1 0.05 0.02
-
-# Test feedforward with large initial error (20cm translation)
-python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0.2 0.1 0.05
+# Run with custom scenarios and plotting
+python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0.1 0.05 0.02 --plot-results
 ```
 
-Alternatively, generate CSV files using the utility function:
+Generate and visualize control analysis using the test framework:
 
 ```python
-# Generate feedforward test CSV files
+# Generate comprehensive control analysis with visualizations
 python -c "
 import sys
 sys.path.append('tests')
-from test_milestone3 import generate_comparison_csvs
+from test_milestone3 import *
+import numpy as np
 
-# Generate multiple test scenarios
-results = generate_comparison_csvs('milestone3_feedforward_tests')
-print('Generated feedforward control test files')
+# Test with visualization
+trajectory = create_simple_trajectory()
+
+# Compare feedforward vs feedback control
+results_ff = simulate_control_loop(
+    trajectory,
+    Kp=np.diag([0, 0, 0, 0, 0, 0]),      # Feedforward only
+    Ki=np.diag([0, 0, 0, 0, 0, 0]),
+    duration_seconds=2.0,
+    initial_error=[0.1, 0.05, 0.02]
+)
+
+results_fb = simulate_control_loop(
+    trajectory,
+    Kp=np.diag([5, 5, 5, 5, 5, 5]),      # With feedback
+    Ki=np.diag([1, 1, 1, 1, 1, 1]),
+    duration_seconds=2.0,
+    initial_error=[0.1, 0.05, 0.02]
+)
+
+# Generate comprehensive visualizations
+plot_control_analysis(results_ff, 'Feedforward Control Analysis')
+plot_control_analysis(results_fb, 'Feedback Control Analysis')
+plot_gain_comparison([results_ff, results_fb], ['Feedforward', 'Feedback'])
+plot_trajectory_comparison([results_ff, results_fb], ['Feedforward', 'Feedback'])
+plot_3d_trajectory([results_ff, results_fb], ['Feedforward', 'Feedback'])
 "
 ```
+
+**Available visualization functions:**
+- `plot_robot_configuration()` - Robot pose and configuration visualization
+- `plot_control_analysis()` - 6-panel control analysis (errors, commands, speeds)
+- `plot_gain_comparison()` - Performance comparison between different gains
+- `plot_trajectory_comparison()` - End-effector trajectory comparison
+- `plot_3d_trajectory()` - 3D trajectory visualization with fallback to 2D
 
 Both options create CSV files for different initial error conditions:
 - `feedforward_perfect_initial.csv` - Perfect initial end-effector position
@@ -598,20 +618,9 @@ The feedforward tests verify:
 - **Initial end-effector errors**: How feedforward control handles various initial position errors
 - **Trajectory following**: Feedforward control's ability to follow reference trajectories
 - **Comparison with feedback**: Behavior differences between feedforward-only and feedforward+feedback control
+- **Visual analysis**: Comprehensive plotting and visualization of control behavior
 
-#### Step 2: Test in CoppeliaSim Scene 8
-
-1. **Load each CSV file** in CoppeliaSim Scene 8
-2. **Set cube positions** to match the trajectory assumptions:
-   - **Initial cube pose**: x=1.0m, y=0.0m, θ=0 radians
-   - **Goal cube pose**: x=0.0m, y=-1.0m, θ=-π/2 radians (-1.571 radians)
-   
-   **Note**: CoppeliaSim Scene 8 accepts cube configurations as **(x, y, θ)** where:
-   - **x, y**: Position coordinates in meters
-   - **θ (theta)**: Rotation angle in **radians** (not degrees)
-3. **Run the simulation** and observe the robot behavior
-
-#### Step 3: Expected Feedforward Control Behavior
+#### Step 2: Expected Feedforward Control Behavior
 
 **Key observations you should make:**
 
@@ -627,7 +636,7 @@ The feedforward tests verify:
 - **Medium error (10cm)**: Larger deviation, may not grasp cube perfectly
 - **Large error (20cm)**: Significant deviation, likely to miss cube entirely
 
-#### Step 4: Add Feedback Control Gains
+#### Step 3: Add Feedback Control Gains
 
 After verifying feedforward behavior, test with non-zero feedback gains:
 
@@ -646,16 +655,16 @@ Ki = np.diag([1, 1, 1, 1, 1, 1])    # Add integral action
 - **Steady-state accuracy**: Better final positioning accuracy
 - **Disturbance rejection**: Ability to handle unexpected perturbations
 
-#### Step 5: Analyze Control Performance
+#### Step 4: Analyze Control Performance with Visualization
 
-Use the plotting and analysis utilities to understand control behavior:
+Use the comprehensive plotting and analysis utilities to understand control behavior:
 
 ```python
-# Generate and analyze simulation results
+# Generate and analyze simulation results with visualization
 python -c "
 import sys
 sys.path.append('tests')
-from test_milestone3 import simulate_control_loop, create_simple_trajectory, plot_results
+from test_milestone3 import *
 import numpy as np
 
 # Create test trajectory
@@ -679,14 +688,45 @@ results_fb = simulate_control_loop(
     initial_error=[0.1, 0.05, 0.02]       # Same initial error
 )
 
-# Compare results (optional - requires matplotlib)
+# Generate comprehensive visualizations
 try:
-    plot_results(results_ff)  # Plot feedforward results
-    plot_results(results_fb)  # Plot feedback results
+    # Control analysis plots (6-panel analysis)
+    plot_control_analysis(results_ff, 'Feedforward Control Analysis')
+    plot_control_analysis(results_fb, 'Feedback Control Analysis')
+    
+    # Performance comparison plots
+    plot_gain_comparison([results_ff, results_fb], ['Feedforward', 'Feedback'])
+    plot_trajectory_comparison([results_ff, results_fb], ['Feedforward', 'Feedback'])
+    
+    # 3D trajectory visualization
+    plot_3d_trajectory([results_ff, results_fb], ['Feedforward', 'Feedback'])
+    
+    # Robot configuration visualization
+    plot_robot_configuration(results_fb['configs'][-1], 'Final Robot Configuration')
+    
+    print('All visualizations generated successfully')
 except ImportError:
-    print('Matplotlib not available for plotting')
+    print('Matplotlib not available - visualizations skipped')
+    print('Install matplotlib with: pip install matplotlib')
 "
 ```
+
+**Available visualization analysis:**
+
+1. **Control Analysis** (`plot_control_analysis`): 6-panel analysis showing:
+   - Position errors (X, Y, Z translation)
+   - Orientation errors (Roll, Pitch, Yaw rotation)  
+   - Control commands over time
+   - Joint velocities and wheel speeds
+   - Error evolution and convergence
+
+2. **Gain Comparison** (`plot_gain_comparison`): Performance comparison between different control gains showing error reduction effectiveness
+
+3. **Trajectory Comparison** (`plot_trajectory_comparison`): End-effector path comparison between feedforward and feedback control
+
+4. **3D Trajectory Visualization** (`plot_3d_trajectory`): 3D visualization of robot end-effector trajectory with automatic fallback to 2D plotting
+
+5. **Robot Configuration** (`plot_robot_configuration`): Current robot pose and joint configuration visualization
 
 This feedforward testing methodology helps you understand the fundamental differences between feedforward and feedback control, which is essential for tuning your complete Milestone 3 controller.
 
@@ -716,7 +756,16 @@ The Milestone 3 implementation provides a complete **Feed-Forward + PI Task-Spac
 - Integral error accumulation and speed limiting validation
 - Integration with Milestone 1 (NextState) and Milestone 2 (TrajectoryGenerator)
 - **Feedforward control testing** with multiple scenarios
+- **Comprehensive visualization capabilities** with matplotlib integration
 - Complete milestone integration testing
+
+**Visualization Features:**
+- `plot_robot_configuration()` - Robot pose and joint configuration plotting
+- `plot_control_analysis()` - 6-panel control analysis (errors, commands, velocities)
+- `plot_gain_comparison()` - Performance comparison between different control gains
+- `plot_trajectory_comparison()` - End-effector trajectory path comparison
+- `plot_3d_trajectory()` - 3D trajectory visualization with 2D fallback
+- Graceful degradation when matplotlib is not available
 
 ### Control Law Implementation
 
@@ -796,6 +845,15 @@ The implementation includes specialized **feedforward control testing** as requi
 3. **`test_feedforward_trajectory_following()`** - Tests trajectory following ability with different speed limits
 4. **`test_feedforward_vs_feedback_comparison()`** - Compares feedforward-only vs feedforward+feedback control
 
+#### Visualization Test Functions in `test_milestone3.py`:
+
+5. **`test_visualization_robot_configuration()`** - Tests robot configuration plotting functionality
+6. **`test_visualization_control_analysis()`** - Tests 6-panel control analysis visualization
+7. **`test_visualization_gain_comparison()`** - Tests gain comparison plotting
+8. **`test_visualization_trajectory_comparison()`** - Tests trajectory comparison visualization
+9. **`test_visualization_3d_trajectory()`** - Tests 3D trajectory plotting with fallback
+10. **`test_visualization_comprehensive()`** - Tests all visualization functions together
+
 #### Key Findings from Feedforward Testing:
 
 - **Perfect Initial Conditions**: Average pose error ~0.0016, 0% control saturation
@@ -824,10 +882,11 @@ results = generate_comparison_csvs('feedforward_outputs')
 
 ### Verification and Compliance
 
-- **All tests pass**: 18/18 comprehensive tests including feedforward scenarios
+- **All tests pass**: 25/25 comprehensive tests including feedforward scenarios and visualization features
 - **API compliance**: Exact function signature and return value match
 - **Constants compliance**: All physical constants match specification exactly
 - **Integration verified**: Works correctly with Milestone 1 and 2 implementations
+- **Visualization capabilities**: Comprehensive plotting and analysis tools with matplotlib integration
 - **Autograder ready**: Designed for full Coursera autograder compatibility
 
 The implementation demonstrates the fundamental differences between feedforward and feedback control, showing how feedforward control cannot correct initial errors while feedback control provides error correction and disturbance rejection.
