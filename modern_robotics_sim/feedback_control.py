@@ -41,6 +41,12 @@ BLIST = np.array([
     [0, 0, 1, 0, 0, 0]
 ]).T
 
+# Pre-computed constant matrices (cached for performance)
+INV_TB0 = np.linalg.inv(TB0)
+
+# Integral error bounds for anti-windup (rad for orientation, m for position)
+INTEGRAL_BOUNDS = np.array([0.5, 0.5, 0.5, 0.1, 0.1, 0.1])
+
 
 def chassis_to_se3(phi, x, y):
     """Convert chassis configuration to SE(3) transformation matrix.
@@ -67,16 +73,20 @@ def chassis_to_se3(phi, x, y):
 def get_F6():
     """Compute the 6x4 F6 matrix mapping wheel rates to chassis twist.
     
+    Wheel numbering convention: front-left=1, front-right=2, rear-left=3, rear-right=4
+    Counter-clockwise from front-left as shown in youBot wiki.
+    
     Returns:
         6x4 F6 matrix
     """
     # 4x3 matrix H0 that converts chassis twist Vb to wheel speeds
     # H0 maps [ωz, vx, vy] to [u1, u2, u3, u4]
+    # Wheel order: front-left, front-right, rear-left, rear-right
     H0 = (1/R) * np.array([
-        [-1/(L+W),  1,  1/(L+W)],  # wheel 1
-        [ 1/(L+W),  1, -1/(L+W)],  # wheel 2  
-        [ 1/(L+W),  1,  1/(L+W)],  # wheel 3
-        [-1/(L+W),  1, -1/(L+W)]   # wheel 4
+        [-1/(L+W),  1,  1/(L+W)],  # wheel 1 (front-left)
+        [ 1/(L+W),  1, -1/(L+W)],  # wheel 2 (front-right)  
+        [ 1/(L+W),  1,  1/(L+W)],  # wheel 3 (rear-left)
+        [-1/(L+W),  1, -1/(L+W)]   # wheel 4 (rear-right)
     ])
     
     # Pseudo-inverse to get F (4x3) mapping wheel speeds to [ωz, vx, vy]
@@ -89,6 +99,10 @@ def get_F6():
     F6[4, :] = F[2, :]  # vy row
     
     return F6
+
+
+# Pre-compute F6 matrix at import time for performance
+F6_MATRIX = get_F6()
 
 
 def compute_jacobian(config):
@@ -107,11 +121,8 @@ def compute_jacobian(config):
     Tsb = chassis_to_se3(phi, x, y)
     T0e = mr.FKinBody(M0E, BLIST, theta)
     
-    # F6 matrix
-    F6 = get_F6()
-    
-    # Base Jacobian columns (6x4)
-    J_base = mr.Adjoint(np.linalg.inv(T0e) @ np.linalg.inv(TB0)) @ F6
+    # Base Jacobian columns (6x4) - using pre-computed constants
+    J_base = mr.Adjoint(np.linalg.inv(T0e) @ INV_TB0) @ F6_MATRIX
     
     # Arm Jacobian columns (6x5) 
     J_arm = mr.JacobianBody(BLIST, theta)
@@ -133,7 +144,8 @@ def FeedbackControl(X_actual, X_desired, X_desired_next, Kp, Ki, dt, integral_er
         Ki: 6x6 diagonal integral gain matrix
         dt: scalar time step (seconds)
         integral_error_prev: 6-vector carried over from last call
-        config: 12-element configuration [phi, x, y, theta1-5, w1-4] (optional, defaults to zeros)
+        config: 12-element configuration [phi, x, y, theta1-5, w1-4] 
+                (optional, defaults to zeros - only for unit tests)
         
     Returns:
         V_cmd: 6-vector - commanded twist in frame {e}
@@ -148,8 +160,9 @@ def FeedbackControl(X_actual, X_desired, X_desired_next, Kp, Ki, dt, integral_er
     # 2. Configuration error (twist)
     X_err = mr.se3ToVec(mr.MatrixLog6(np.linalg.inv(X_actual) @ X_desired))
     
-    # 3. Integral update
+    # 3. Integral update with anti-windup guard
     integral_error_new = integral_error_prev + X_err * dt
+    integral_error_new = np.clip(integral_error_new, -INTEGRAL_BOUNDS, INTEGRAL_BOUNDS)
     
     # 4. Commanded twist (body frame)
     V_cmd = (mr.Adjoint(np.linalg.inv(X_actual) @ X_desired) @ Vd + 
@@ -158,7 +171,7 @@ def FeedbackControl(X_actual, X_desired, X_desired_next, Kp, Ki, dt, integral_er
     
     # 5. Wheel + joint rates
     if config is None:
-        config = np.zeros(12)  # Default configuration for testing
+        config = np.zeros(12)  # Default configuration for testing only
     
     Je = compute_jacobian(config)
     controls_raw = np.linalg.pinv(Je, rcond=PINV_TOLERANCE) @ V_cmd
