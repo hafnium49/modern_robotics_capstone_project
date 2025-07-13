@@ -1,32 +1,83 @@
-# modern_robotics_capstone_project
+# Modern Robotics Capstone Project
 
-This repository contains a simple kinematic simulator for the Modern Robotics
-capstone project.  The main function `NextState` propagates the robot
-configuration forward one time step given wheel and joint commands.
+A comprehensive kinematic simulator and control system for the youBot mobile manipulator, implementing the complete Modern Robotics capstone project pipeline. This repository provides a full-stack robotics solution including forward kinematics simulation, trajectory generation, and advanced feedback control.
 
-The simulator requires Python 3.10+ and the `modern_robotics` library.  
-Install all dependencies with
+## Overview
 
+This project implements a complete robotics control pipeline for the KUKA youBot mobile manipulator, covering three major milestones:
+
+- **Milestone 1**: Kinematic simulator with SE(3) chassis dynamics and joint integration
+- **Milestone 2**: Eight-segment trajectory generator for pick-and-place operations  
+- **Milestone 3**: Feed-forward + PI task-space control with comprehensive visualization
+
+## Key Features
+
+### 🤖 **Complete Robot Simulation**
+- SE(3)-based chassis kinematics with omnidirectional wheel dynamics
+- 5-DOF manipulator arm forward kinematics and Jacobian computation
+- Speed limiting and realistic physical constraints
+
+### 📈 **Advanced Trajectory Generation**
+- Eight-segment pick-and-place trajectory planning
+- Multiple time-scaling methods (cubic, quintic, trapezoid)
+- Automatic timing optimization based on velocity and acceleration limits
+- CoppeliaSim Scene 8 compatibility
+
+### 🎯 **Sophisticated Control System**
+- Feed-forward + PI task-space control implementation
+- Mobile manipulator Jacobian with base and arm coupling
+- Real-time error tracking and integral action
+- Comprehensive visualization and analysis tools
+
+### 📊 **Visualization & Analysis**
+- 6-panel control analysis (position/orientation errors, commands, velocities)
+- 3D trajectory visualization with automatic 2D fallback
+- Robot configuration plotting and gain comparison tools
+- Performance analysis for feedforward vs feedback control
+
+## Requirements
+
+- **Python 3.10+** 
+- **NumPy** for numerical computations
+- **modern_robotics** library for SE(3) operations
+- **matplotlib** (optional) for visualization capabilities
+- **pytest** for testing
+
+## Quick Start
+
+### Installation
 ```bash
+# Clone the repository
+git clone https://github.com/hafnium49/modern_robotics_capstone_project.git
+cd modern_robotics_capstone_project
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-The `driver` module can generate CSV files compatible with the CoppeliaSim
-scenes.  Example usage for the first sanity‑check scenario is
-
+### Basic Usage
 ```bash
+# Run all tests to verify installation
+pytest -q
+
+# Generate trajectory for CoppeliaSim Scene 8
 python -m modern_robotics_sim.driver initial_config.csv output.csv \
     --controls 10 10 10 10 0 0 0 0 0 --speed-limit 20
+
+# Test complete control system with visualization
+python -m pytest tests/test_milestone3.py -k "visualization" -v
 ```
 
-The package also exposes a `TrajectoryGenerator` utility for the
-pick‑and‑place task in later milestones. It returns an **N × 13** NumPy
-array that can be written directly to a CSV file for Scene 6.
-
-Unit tests verify both `NextState` and the trajectory generator.  Run:
-
+### Testing Individual Components
 ```bash
-pytest -q
+# Test kinematic simulator (Milestone 1)
+pytest tests/test_milestone1.py -v
+
+# Test trajectory generator (Milestone 2)  
+pytest tests/test_milestone2.py -v
+
+# Test feedback control system (Milestone 3)
+pytest tests/test_milestone3.py -v
 ```
 
 ---
