@@ -941,3 +941,62 @@ results = generate_comparison_csvs('feedforward_outputs')
 - **Autograder ready**: Designed for full Coursera autograder compatibility
 
 The implementation demonstrates the fundamental differences between feedforward and feedback control, showing how feedforward control cannot correct initial errors while feedback control provides error correction and disturbance rejection.
+
+---
+
+## Final Milestone (Milestone 4) — **Software‐integration requirements**
+
+Below is a concise checklist of **what your codebase must expose, how the pieces talk to each other, and the fixed numerical values that the autograder (and peer reviewers) will assume**.  Follow it literally to avoid "wrong signature / wrong units" errors.
+
+| # | Element                                                      | Mandatory public signature\*                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Key assumptions & fixed parameters                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| - | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | **NextState** – one‐step kinematic simulator                 | `conf_next = NextState(conf, controls, dt=0.01, speed_limit=5.0)` <br> \* `conf` – 12‑vector ⟨ϕ, x, y, θ₁…θ₅, W₁…W₄⟩ <br> \* `controls` – 9‑vector ⟨u₁…u₄, θ̇₁…θ̇₅⟩ (rad s⁻¹) <br> \* `dt` – fixed at **0.01 s** <br> \* `speed_limit` – clamp magnitude of every wheel & joint rate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | • Forward‑Euler integration. <br> • Wheel → body–twist map uses constants: <br>   r = 0.0475 m, l = 0.235 m (half of 0.47 m), w = 0.15 m (half of 0.30 m). <br> • Body‑twist → SE (3) pose update via matrix exponential.                                                                                                                                                                                                                          |
+| 2 | **TrajectoryGenerator** – eight‑segment nominal path for {e} | `traj, csv_path = TrajectoryGenerator(Tse_init, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff, k=1)` <br> returns an N × 13 matrix (r₁₁…r₃₃, pₓ, p\_y, p\_z, gripper) and writes the same rows to a CSV file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Fixed transforms (SI units, radians): <br> \* `Tce_grasp` = diag⟨1,1,1⟩, p = \[0, 0, 0.02] m (cube halfway into fingers) <br> \* `Tce_standoff` = `Tce_grasp` shifted +\[0,0,0.10] m in z₍c₎ <br> \* Gripper open / close dwell = 0.625 s = 63 rows. <br> \* Time scaling – quintic (`QuinticTimeScaling`) unless otherwise stated. <br> \* Segment durations (recommended): up/down 1 s; long chassis moves ≥2 s (tune to stay within 5 rad s⁻¹). |
+| 3 | **FeedbackControl** – task‑space feed‑forward + PI           | `V, X_err, int_err_next = FeedbackControl(X, Xd, Xd_next, Ki, Kp, dt, int_err)` <br> \* Frames expressed in **{e}**. <br> \* Returns 6‑vector body twist `V`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | • Control law (textbook Eq. 11.16):  $Ad(X⁻¹ Xd) V_d + K_p X_err + K_i ∫X_err dt$. <br> • Use `V_d = (1/dt) log(Xd⁻¹ Xd_next)`.                                                                                                                                                                                                                                                                                                                    |
+| 4 | **youBotConst** – one source of truth for kinematic data     | Expose (or import) the constants: <br> `Blist  # 6×5 screw axes in {e}` <br> `M0e   # 4×4 home of {e} in {0}` <br> `Tb0   # fixed transform {b}->{0}`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Values from course page: <br> **B₁** = (0,0,1, 0, 0.033,0) <br> **B₂** = (0,−1,0, −0.5076,0,0) <br> **B₃** = (0,−1,0, −0.3526,0,0) <br> **B₄** = (0,−1,0, −0.2176,0,0) <br> **B₅** = (0,0,1, 0,0,0). <br> `M0e = [[1,0,0,0.033],[0,1,0,0],[0,0,1,0.6546],[0,0,0,1]]` <br> `Tb0 = [[1,0,0,0.1662],[0,1,0,0],[0,0,1,0.0026],[0,0,0,1]]`                                                                                                              |
+| 5 | **Main driver script** (e.g. `run_capstone.py`)              | No fixed signature; **must**: <br> 1. Hard‑code default cube poses: <br>   `Tsc_init = diag(1,1,1), p=[1,0,0.025]` m <br>   `Tsc_goal = [[0,1,0,0],[-1,0,0,-1],[0,0,1,0.025],[0,0,0,1]]` <br> 2. Choose an initial robot 13‑vector with ≥0.20 m position error **and** ≥30 deg orientation error from the first row of the reference trajectory. <br> 3. Generate nominal path → loop: <br>   • call **FeedbackControl** <br>   • map twist → wheel + joint rates with damped pseudoinverse **J\_e†** (`numpy.linalg.pinv`, tol ≥ 1e‑3) <br>   • clamp to 5 rad s⁻¹ <br>   • call **NextState** <br>   • log every step (or every *k*‑th step) to build the 13‑column csv <br>   • log 6‑vector `X_err` for plotting. <br> 4. Write two files into `results/best/` (and other sub‑tasks): <br>   `youBot_output.csv`, `Xerr_log.csv`. | • Loop runs `N-1` iterations, where `N` is trajectory rows. <br> • Use **dt = 0.01 s** throughout. <br> • Wheel + joint speed limit **u, θ̇ ≤ 5 rad s⁻¹** (modify if you use a different constant `speed_limit` but keep it consistent). <br> • Suggested gains: <br>   `Kp = diag([5,5,5,5,5,5])` <br>   `Ki = diag([0.5,0.5,0.5,0.5,0.5,0.5])` (tune as needed). |
+
+\* **Language:** Python, MATLAB, or Mathematica are all accepted.  Signatures shown in Python style; use the closest analogue in your language.
+\* **Return order:** stick to the order shown; the autograder imports by position, not keyword.
+
+---
+
+#### Additional coding constraints
+
+* **Numerical safeguards**
+
+  * Pseudoinverse tolerance ≥ 1 × 10⁻³; smaller singular values are treated as zero to suppress huge rates near singularities.
+  * Clip after, not before, the pseudoinverse multiplication so that direction is preserved.
+
+* **Logging**
+
+  * Print at least one status line per run, e.g.
+
+    ```
+    Generating reference trajectory … done (2313 points)
+    Simulating 2312 control steps … done
+    CSV written to results/best/youBot_output.csv
+    ```
+  * Plot of all six components of `X_err` vs time saved as `Xerr_plot.pdf` (no proprietary format).
+
+* **Directory layout to submit**
+
+```
+capstone_submission.zip
+ ├── README.pdf
+ ├── code/
+ │    ├── youBotConst.py
+ │    ├── NextState.py
+ │    ├── TrajectoryGenerator.py
+ │    ├── FeedbackControl.py
+ │    └── run_capstone.py
+ └── results/
+      ├── best/
+      │     ├── youBot_output.csv
+      │     ├── Xerr_log.csv
+      │     └── Xerr_plot.pdf
+      ├── overshoot/          # similar files with deliberately lower gains
+      └── newTask/            # user‑chosen cube poses
+```
+
+Follow these interface contracts and parameter values exactly; if the autograder can import and run the five public functions with the defaults above, and the generated csv animates successfully in Scene 6, you will satisfy Milestone 4.
