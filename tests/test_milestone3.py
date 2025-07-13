@@ -608,36 +608,73 @@ def plot_3d_trajectory(results, title="3D Robot Trajectory"):
     
     ee_positions = np.array(ee_positions)
     
-    fig = plt.figure(figsize=(12, 9))
-    ax = fig.add_subplot(111, projection='3d')
-    
-    # Plot chassis trajectory
-    ax.plot(configs[:, 1], configs[:, 2], np.zeros(len(configs)), 
-            'b-', linewidth=3, label='Chassis path', alpha=0.8)
-    
-    # Plot end-effector trajectory
-    ax.plot(ee_positions[:, 0], ee_positions[:, 1], ee_positions[:, 2],
-            'r-', linewidth=2, label='End-effector path')
-    
-    # Mark start and end points
-    ax.scatter(configs[0, 1], configs[0, 2], 0, color='green', s=100, label='Start')
-    ax.scatter(configs[-1, 1], configs[-1, 2], 0, color='red', s=100, label='End')
-    
-    ax.scatter(ee_positions[0, 0], ee_positions[0, 1], ee_positions[0, 2], 
-               color='green', s=100, marker='*')
-    ax.scatter(ee_positions[-1, 0], ee_positions[-1, 1], ee_positions[-1, 2], 
-               color='red', s=100, marker='*')
-    
-    ax.set_xlabel('X (m)')
-    ax.set_ylabel('Y (m)')
-    ax.set_zlabel('Z (m)')
-    ax.set_title(title)
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    
-    plt.show()
-    
-    return fig
+    try:
+        # Try to create 3D plot
+        fig = plt.figure(figsize=(12, 9))
+        ax = fig.add_subplot(111, projection='3d')
+        
+        # Plot chassis trajectory
+        ax.plot(configs[:, 1], configs[:, 2], np.zeros(len(configs)), 
+                'b-', linewidth=3, label='Chassis path', alpha=0.8)
+        
+        # Plot end-effector trajectory
+        ax.plot(ee_positions[:, 0], ee_positions[:, 1], ee_positions[:, 2],
+                'r-', linewidth=2, label='End-effector path')
+        
+        # Mark start and end points
+        ax.scatter(configs[0, 1], configs[0, 2], 0, color='green', s=100, label='Start')
+        ax.scatter(configs[-1, 1], configs[-1, 2], 0, color='red', s=100, label='End')
+        
+        ax.scatter(ee_positions[0, 0], ee_positions[0, 1], ee_positions[0, 2], 
+                   color='green', s=100, marker='*')
+        ax.scatter(ee_positions[-1, 0], ee_positions[-1, 1], ee_positions[-1, 2], 
+                   color='red', s=100, marker='*')
+        
+        ax.set_xlabel('X (m)')
+        ax.set_ylabel('Y (m)')
+        ax.set_zlabel('Z (m)')
+        ax.set_title(title)
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        
+        plt.show()
+        
+        return fig
+        
+    except Exception as e:
+        print(f"3D plotting failed (likely backend issue): {e}")
+        print("Falling back to 2D projection...")
+        
+        # Fallback to 2D plot
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        
+        # XY projection
+        ax1.plot(configs[:, 1], configs[:, 2], 'b-', linewidth=2, label='Chassis path')
+        ax1.plot(ee_positions[:, 0], ee_positions[:, 1], 'r-', linewidth=2, label='End-effector path')
+        ax1.scatter(configs[0, 1], configs[0, 2], color='green', s=100, label='Start')
+        ax1.scatter(configs[-1, 1], configs[-1, 2], color='red', s=100, label='End')
+        ax1.set_xlabel('X (m)')
+        ax1.set_ylabel('Y (m)')
+        ax1.set_title('XY Projection')
+        ax1.legend()
+        ax1.grid(True)
+        ax1.axis('equal')
+        
+        # XZ projection
+        ax2.plot(ee_positions[:, 0], ee_positions[:, 2], 'r-', linewidth=2, label='End-effector path')
+        ax2.scatter(ee_positions[0, 0], ee_positions[0, 2], color='green', s=100, label='Start')
+        ax2.scatter(ee_positions[-1, 0], ee_positions[-1, 2], color='red', s=100, label='End')
+        ax2.set_xlabel('X (m)')
+        ax2.set_ylabel('Z (m)')
+        ax2.set_title('XZ Projection')
+        ax2.legend()
+        ax2.grid(True)
+        
+        plt.suptitle(f"{title} (2D Fallback)")
+        plt.tight_layout()
+        plt.show()
+        
+        return fig
 
 
 def demonstrate_gain_effects():
@@ -1532,12 +1569,21 @@ def test_feedforward_with_initial_error():
         ("Large translation", np.array([0.2, 0.1, 0.05])),     # 20cm x, 10cm y, 5cm z
     ]
     
+    # Initial robot configuration
+    config = np.array([0.0, 0.0, 0.0,  # chassis: phi, x, y
+                       0.0, 0.0, 0.0, 0.0, 0.0,  # arm joints
+                       0.0, 0.0, 0.0, 0.0])  # wheels
+    
     for error_name, position_error in initial_errors:
         print(f"\nTesting with {error_name}: {position_error}")
         
         # Reset configuration
         current_config = config.copy()
         integral_error = np.zeros(6)
+        
+        # Use feedforward only (Kp=0, Ki=0)
+        Kp = np.zeros((6, 6))
+        Ki = np.zeros((6, 6))
         
         # Storage for this test
         pose_errors = []
@@ -1863,7 +1909,7 @@ def test_visualization_control_analysis():
     
     # Create a simple trajectory and simulate
     trajectory_gen = create_simple_trajectory()
-    trajectory = trajectory_gen.generate()
+    trajectory = trajectory_gen  # TrajectoryGenerator returns trajectory directly
     
     # Simulate with different gain settings
     Kp_high = np.diag([10, 10, 10, 10, 10, 10])
@@ -1893,7 +1939,7 @@ def test_visualization_gain_comparison():
     
     # Create trajectory
     trajectory_gen = create_simple_trajectory()
-    trajectory = trajectory_gen.generate()
+    trajectory = trajectory_gen  # TrajectoryGenerator returns trajectory directly
     
     # Test different gain combinations
     gain_configs = [
@@ -1933,7 +1979,7 @@ def test_visualization_trajectory_comparison():
     
     # Create trajectory
     trajectory_gen = create_simple_trajectory()
-    trajectory = trajectory_gen.generate()
+    trajectory = trajectory_gen  # TrajectoryGenerator returns trajectory directly
     
     # Simulate robot following trajectory
     results = simulate_control_loop(
@@ -1959,7 +2005,7 @@ def test_visualization_3d_trajectory():
     
     # Create trajectory with arm motion
     trajectory_gen = create_simple_trajectory()
-    trajectory = trajectory_gen.generate()
+    trajectory = trajectory_gen  # TrajectoryGenerator returns trajectory directly
     
     # Simulate with arm movement
     results = simulate_control_loop(
