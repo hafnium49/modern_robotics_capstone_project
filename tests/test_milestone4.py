@@ -223,12 +223,13 @@ class TestMilestone4Simulation:
     """Test the complete capstone simulation."""
     
     def setup_method(self):
-        """Set up temporary directory for each test."""
-        self.temp_dir = tempfile.mkdtemp()
+        """Set up milestone4 output directory for each test."""
+        self.output_dir = os.path.join(os.path.dirname(__file__), "..", "milestone4")
+        os.makedirs(self.output_dir, exist_ok=True)
         
     def teardown_method(self):
-        """Clean up temporary directory after each test."""
-        shutil.rmtree(self.temp_dir)
+        """Clean up is handled by keeping outputs in milestone4 directory."""
+        pass
         
     def test_short_simulation_run(self):
         """Test a short simulation run for basic functionality."""
@@ -288,7 +289,7 @@ class TestMilestone4Simulation:
         youbot_data[:, :12] = config_log
         youbot_data[:, 12] = 0  # gripper closed
         
-        csv_path = os.path.join(self.temp_dir, "test_output.csv")
+        csv_path = os.path.join(self.output_dir, "test_output.csv")
         np.savetxt(csv_path, youbot_data, delimiter=',', fmt='%.6f')
         
         # Verify file exists and has correct format
@@ -306,9 +307,9 @@ class TestMilestone4Simulation:
         
         # Test plotting function (should handle missing matplotlib gracefully)
         try:
-            plot_error_results(error_log, self.temp_dir)
+            plot_error_results(error_log, self.output_dir)
             # If matplotlib available, check if PDF was created
-            pdf_path = os.path.join(self.temp_dir, "Xerr_plot.pdf")
+            pdf_path = os.path.join(self.output_dir, "Xerr_plot.pdf")
             if os.path.exists(pdf_path):
                 assert os.path.getsize(pdf_path) > 0
         except ImportError:
@@ -561,6 +562,60 @@ class TestFullSystemIntegration:
         # System should be stable (no exploding errors)
         assert final_error < 10.0, "System appears unstable"
         assert np.all(np.isfinite(config)), "Configuration contains invalid values"
+        
+    def test_simple_debug_integration(self):
+        """Test from debug_milestone4.py - basic integration functionality."""
+        # Create poses
+        Tsc_init, Tsc_goal = create_default_cube_poses()
+        Tce_grasp, Tce_standoff = create_grasp_transforms()
+        
+        # Generate trajectory  
+        Tse_init = compute_current_ee_pose(np.zeros(12))
+        trajectory = TrajectoryGenerator(
+            Tse_init, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff, k=1
+        )
+        
+        # Verify trajectory was generated
+        assert len(trajectory) > 100, "Trajectory should have reasonable length"
+        
+        # Test one control step
+        config = np.zeros(12)  # Start at nominal position
+        
+        # Extract first desired pose
+        X_desired = extract_pose_from_trajectory_row(trajectory[0])
+        X_desired_next = extract_pose_from_trajectory_row(trajectory[1])
+        X_actual = compute_current_ee_pose(config)
+        
+        # Run feedback control
+        Kp = np.diag([2, 2, 2, 2, 2, 2])  # Lower gains for stability
+        Ki = np.diag([0, 0, 0, 0, 0, 0])   # No integral for now
+        
+        V_cmd, controls_twist, X_err, integral = FeedbackControl(
+            X_actual, X_desired, X_desired_next, Kp, Ki, 0.01, np.zeros(6), config
+        )
+        
+        # Verify feedback control produces reasonable outputs
+        assert V_cmd.shape == (6,), "Commanded twist should be 6-element"
+        assert X_err.shape == (6,), "Error should be 6-element"
+        
+        # Compute control with Jacobian
+        Je = compute_jacobian(config)
+        controls = np.linalg.pinv(Je) @ V_cmd
+        controls = np.clip(controls, -5.0, 5.0)
+        
+        # Simulate one step
+        new_config = NextState(config, controls, 0.01, 5.0)
+        
+        # Verify simulation step worked
+        assert new_config.shape == (12,), "New config should be 12-element"
+        assert not np.array_equal(config, new_config), "Configuration should change"
+        
+        # Check if position changed reasonably
+        new_ee_pos = compute_current_ee_pose(new_config)
+        old_ee_pos = compute_current_ee_pose(config)
+        position_change = np.linalg.norm(new_ee_pos[:3, 3] - old_ee_pos[:3, 3])
+        assert position_change > 0, "End-effector position should change"
+        assert position_change < 0.1, "Position change should be reasonable for one timestep"
 
 
 if __name__ == "__main__":
