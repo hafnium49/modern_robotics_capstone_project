@@ -1,0 +1,23 @@
+Modern Robotics Capstone Project - Program Execution Log
+=======================================================
+
+>> run_capstone_simulation('feedforward')
+Generating reference trajectory...
+Generated trajectory with 3003 points.
+Running mobile manipulator control simulation...
+Computing feedback control at each time step...
+Generating animation csv file...
+Writing error plot data...
+Creating error convergence plots...
+Done.
+
+Simulation Results:
+- Execution time: 8.69 seconds
+- Trajectory points: 3003
+- Initial position error: 0.5281 m
+- Final position error: 3.8634 m
+- Initial orientation error: 1.6209 rad
+- Final orientation error: 1.4894 rad
+- Convergence achieved: Partial
+
+>> 

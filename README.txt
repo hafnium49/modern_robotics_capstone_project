@@ -5,7 +5,7 @@ OVERVIEW
 --------
 This submission contains the complete implementation of the Modern Robotics
 capstone project, integrating all four milestones into a comprehensive
-mobile manipulator control system.
+mobile manipulator control system for pick-and-place tasks.
 
 SOFTWARE ARCHITECTURE
 --------------------
@@ -25,47 +25,89 @@ The implementation follows the standard approach described in the course:
 
 CONTROL SYSTEM DESIGN
 --------------------
-The controller implements feedforward + PI control with:
-- SE(3) pose error computation using matrix logarithm
-- Anti-windup protection for integral terms
-- Speed limiting for realistic operation
-- Robust numerical methods for pseudoinverse computation
+The controller implements feedforward + PI control:
+
+V = [Ad_X^-1_Xd] * Vd + Kp * X_err + Ki * integral(X_err) dt
+
+Where:
+- V: commanded end-effector twist
+- Vd: feedforward reference twist
+- X_err: SE(3) pose error (computed via matrix logarithm)
+- Kp, Ki: proportional and integral gain matrices
+
+The mobile manipulator Jacobian maps end-effector twists to wheel/joint velocities:
+u = J^+ * V
 
 RESULTS SUMMARY
 --------------
-Three scenarios demonstrate different control behaviors:
-1. BEST: Well-tuned controller with smooth convergence
-2. OVERSHOOT: High-gain controller showing oscillation
-3. NEWTASK: Custom task demonstrating system flexibility
+Three demonstration scenarios are provided:
 
-All scenarios meet the error requirements:
-- Initial position error: >0.2 m
-- Initial orientation error: >30 degrees
+1. BEST (results/best/):
+   - Controller: Feedforward + PI
+   - Gains: Kp = diag(4,4,4,4,4,4), Ki = diag(0.2,0.2,0.2,0.2,0.2,0.2)
+   - Behavior: Smooth convergence with minimal overshoot
+
+2. OVERSHOOT (results/overshoot/):
+   - Controller: Feedforward + P (high gains)
+   - Gains: Kp = diag(12,12,12,12,12,12), Ki = diag(0,0,0,0,0,0)
+   - Behavior: Demonstrates overshoot and oscillation
+
+3. NEWTASK (results/newTask/):
+   - Controller: Feedforward + PI 
+   - Task: Custom cube configurations
+   - Initial: (x=2.0, y=1.0, theta=pi/4)
+   - Goal: (x=-0.5, y=1.5, theta=-pi/3)
+
+ERROR REQUIREMENTS COMPLIANCE
+-----------------------------
+All scenarios meet the specified error requirements:
+- Initial position error: >0.2 m (requirement met)
+- Initial orientation error: >30 degrees (requirement met)
 - Error elimination before trajectory segment 1 completion
 
 DIRECTORY STRUCTURE
 ------------------
-code/              - Source code implementation
-results/best/      - Well-tuned controller results
-results/overshoot/ - Overshoot demonstration results
-results/newTask/   - Custom task results
-README.txt         - This file
+code/                   - Source code implementation
+results/                - Simulation results
+  ├── best/                   - Well-tuned controller
+  ├── overshoot/              - Overshoot demonstration
+  └── newTask/                - Custom task
 
-USAGE
------
-To run the software:
-1. Run 'python generate_submission.py' to recreate all results
-2. Individual scenarios: 'python run_milestone4.py [scenario]'
-3. CoppeliaSim: Load capstone scene and import CSV files
+Each results directory contains:
+  ├── README.txt              - Controller description and gains
+  ├── youBot_output.csv       - Robot configuration for CoppeliaSim
+  ├── Xerr_log.csv           - 6-DOF pose error data
+  ├── Xerr_plot.pdf          - Error convergence plots
+  └── program_log.txt        - Program execution log
 
-ENHANCEMENTS
------------
-Beyond the basic requirements, this implementation includes:
-- Comprehensive test suite (47+ tests)
+USAGE INSTRUCTIONS
+-----------------
+Generate complete submission package:
+  python main.py
+
+Run individual scenarios:
+  python main.py best
+  python main.py overshoot
+  python main.py newTask
+
+Run all scenarios:
+  python main.py all
+
+COPPELISIM ANIMATION
+------------------
+To animate the results in CoppeliaSim:
+1. Open the capstone scene (Scene8_gripper.ttt)
+2. Import the youBot_output.csv file
+3. Run the simulation to see the mobile manipulation task
+
+ENHANCEMENTS BEYOND REQUIREMENTS
+-------------------------------
+This implementation includes several enhancements:
+- Comprehensive testing (47+ unit and integration tests)
 - Multiple control scenarios and parameter studies
-- Professional error analysis and visualization
-- Robust numerical implementation with stability measures
-- Modular design enabling easy extension and modification
+- Professional software engineering practices
+- Robust numerical methods and error handling
+- Extensive documentation and analysis tools
 
 The implementation demonstrates professional software engineering
 practices suitable for research and industrial applications.

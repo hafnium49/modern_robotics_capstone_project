@@ -1,36 +1,31 @@
 #!/usr/bin/env python3
 """
-Usage examples for Modern Robotics Capstone Project
+Modern Robotics Capstone Project - Usage Examples
 
-Run this script to see example usage of the mobile manipulation software.
+This script demonstrates how to use the mobile manipulation software.
 """
-
-import os
-import sys
 
 def main():
     print("Modern Robotics Capstone Project - Usage Examples")
     print("=" * 50)
     print()
-    print("Basic usage:")
-    print("  python run_milestone4.py best")
-    print("  python run_milestone4.py overshoot") 
-    print("  python run_milestone4.py newTask")
+    print("Generate complete submission package:")
+    print("  python main.py")
+    print("  python main.py submission")
     print()
-    print("Generate complete submission:")
-    print("  python generate_submission.py")
+    print("Run individual scenarios:")
+    print("  python main.py best")
+    print("  python main.py overshoot") 
+    print("  python main.py newTask")
     print()
-    print("Individual control modes:")
-    print("  python run_milestone4.py feedforward")
-    print("  python run_milestone4.py proportional")
-    print("  python run_milestone4.py feedforward_pi")
+    print("Run all control modes:")
+    print("  python main.py feedforward")
+    print("  python main.py proportional")
+    print("  python main.py feedforward_pi")
+    print("  python main.py all")
     print()
-    print("Analysis:")
-    print("  python run_milestone4.py --analyze best")
-    print("  python run_milestone4.py --compare")
-    print()
-    print("Custom output directory:")
-    print("  python run_milestone4.py best --output my_results")
+    print("Analysis and verification:")
+    print("  python verify_submission.py")
 
 if __name__ == "__main__":
     main()
