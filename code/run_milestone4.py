@@ -135,8 +135,8 @@ Examples:
             success = len(results) > 0
         elif args.scenario == 'submission':
             # Generate complete submission package
-            from create_submission_package import main as create_submission
-            success = create_submission()
+            from generate_submission import main as generate_submission
+            success = generate_submission()
             if success:
                 print("\n🎉 Complete submission package generated!")
                 print("Ready for submission with all required directories and files.")

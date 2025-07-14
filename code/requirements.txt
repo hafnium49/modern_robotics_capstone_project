@@ -1,0 +1,4 @@
+numpy
+scipy
+modern_robotics
+matplotlib
