@@ -812,9 +812,9 @@ The Milestone 3 implementation provides a complete **Feed-Forward + PI Task-Spac
 
 **Visualization Features:**
 - `plot_robot_configuration()` - Robot pose and joint configuration plotting
-- `plot_control_analysis()` - 6-panel control analysis (errors, commands, velocities)
+- `plot_control_analysis()` - 6-panel control analysis (errors, commands, speeds)
 - `plot_gain_comparison()` - Performance comparison between different control gains
-- `plot_trajectory_comparison()` - End-effector trajectory path comparison
+- `plot_trajectory_comparison()` - End-effector trajectory comparison
 - `plot_3d_trajectory()` - 3D trajectory visualization with 2D fallback
 - Graceful degradation when matplotlib is not available
 
@@ -866,7 +866,7 @@ from modern_robotics_sim.next_state import NextState
 from modern_robotics_sim.trajectory_generator import TrajectoryGenerator
 
 # Generate trajectory (Milestone 2)
-trajectory = TrajectoryGenerator(T_se_init, T_sc_init, T_sc_goal, T_ce_grasp, T_ce_standoff)
+trajectory = TrajectoryGenerator(Tse_init, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff)
 
 # Control loop
 controller = FeedbackController()
@@ -1000,3 +1000,210 @@ capstone_submission.zip
 ```
 
 Follow these interface contracts and parameter values exactly; if the autograder can import and run the five public functions with the defaults above, and the generated csv animates successfully in Scene 6, you will satisfy Milestone 4.
+
+---
+
+## Testing Milestone 4 - Complete Integration
+
+### Final Step: Completing the Project and Testing Your Submission
+
+Now that feedforward control is working, you are ready to complete your project and test the full integrated system. The final milestone brings together all three previous milestones into a complete pick-and-place control system.
+
+### Required Configuration for Testing
+
+Use the **default initial configurations** for the cube in the capstone CoppeliaSim scene:
+- **Initial cube configuration**: `(x, y, θ) = (1, 1 m, 0 m, 0 rad)`
+- **Final cube configuration**: `(x, y, θ) = (0 m, −1 m, −π/2 rad)`
+
+**Initial end-effector reference trajectory pose**:
+```
+T_se = [[0,  0,  1,  0  ],
+        [0,  1,  0,  0  ],
+        [-1, 0,  0,  0.5],
+        [0,  0,  0,  1  ]]
+```
+
+**Critical requirement**: Choose an initial configuration of the youBot so that the end-effector has:
+- **≥30 degrees of orientation error** from the reference trajectory
+- **≥0.2 m of position error** from the reference trajectory
+
+### Testing Options
+
+#### **Option 1: Run Automated Tests**
+
+```bash
+# Run all Milestone 4 integration tests
+pytest tests/test_milestone4.py -v
+
+# Run specific test categories
+pytest tests/test_milestone4.py -k "integration" -v
+pytest tests/test_milestone4.py -k "control" -v
+pytest tests/test_milestone4.py -k "full_system" -v
+```
+
+The automated tests verify:
+- **Complete system integration** (Milestones 1, 2, 3 working together)
+- **Initial error requirements** (≥30° orientation, ≥0.2m position error)
+- **Control scenarios** (feedforward, proportional, PI, feedforward+PI)
+- **File generation** (`youBot_output.csv`, `Xerr_log.csv`, `Xerr_plot.pdf`)
+- **Error convergence** and trajectory following performance
+
+#### **Option 2: Manual Execution and Progressive Controller Testing**
+
+Follow the progressive testing methodology to understand controller behavior:
+
+##### Step 1: Test Feedforward-Only Control
+
+```bash
+# Generate feedforward-only results (Kp = Ki = 0)
+python main.py feedforward
+```
+
+**Expected behavior**:
+- Robot follows trajectory motion but **cannot correct initial errors**
+- Initial position/orientation errors **persist** throughout execution
+- May fail to grasp cube if initial error is too large
+
+##### Step 2: Add Proportional Control
+
+```bash
+# Test with small proportional gains first
+python main.py proportional
+
+# Test with the well-tuned "best" scenario
+python main.py best
+```
+
+**Progressive gain tuning approach**:
+1. **Start small**: `Kp = diag([1,1,1,1,1,1])`, `Ki = 0`
+2. **Increase gradually**: `Kp = diag([3,3,3,3,3,3])`, `Ki = 0`  
+3. **Final tuning**: `Kp = diag([5,5,5,5,5,5])`, `Ki = 0`
+
+**Expected improvements**:
+- **Error correction**: Initial errors should decrease over time
+- **Better tracking**: Improved trajectory following accuracy
+- **Grasp success**: Higher probability of successful cube manipulation
+
+##### Step 3: Test Overshoot Behavior
+
+```bash
+# Test deliberately poor gains to observe overshoot
+python main.py overshoot
+```
+
+**Purpose**: Demonstrate the effects of poorly tuned gains and the importance of proper controller design.
+
+##### Step 4: Add Integral Control
+
+```bash
+# Test feedforward + PI control
+python main.py feedforward_pi
+
+# Test all control modes for comparison
+python main.py all
+```
+
+**Expected benefits of integral action**:
+- **Steady-state accuracy**: Elimination of constant errors
+- **Disturbance rejection**: Better handling of modeling uncertainties
+- **Robust performance**: Improved overall system reliability
+
+##### Step 5: Custom Task Testing
+
+```bash
+# Test with custom cube poses
+python main.py newTask
+```
+
+### Verification Steps
+
+#### 1. File Generation Verification
+
+After each test, verify the required files are generated in `results/[scenario]/`:
+
+```bash
+# Check results structure
+ls -la results/best/
+# Should contain:
+# - youBot_output.csv  (13-column robot trajectory)
+# - Xerr_log.csv       (6-DOF error data)  
+# - Xerr_plot.pdf      (Error convergence plot)
+# - README.txt         (Scenario documentation)
+# - program_log.txt    (Execution log)
+```
+
+#### 2. CoppeliaSim Animation Testing
+
+1. **Load Scene 8** in CoppeliaSim
+2. **Set cube poses** to match your scenario:
+   - Default: Initial at (1,0,0.025), Goal at (0,-1,0.025)
+   - Custom: Set according to your newTask configuration
+3. **Load CSV**: Import `youBot_output.csv` using scene's CSV mechanism
+4. **Run simulation** and verify:
+   - Robot approaches cube at initial position
+   - Gripper closes (grasp operation)
+   - Robot transports cube to goal position  
+   - Gripper opens (release operation)
+   - Robot returns to standoff position
+
+#### 3. Performance Analysis
+
+**Key metrics to evaluate**:
+
+```python
+# Analyze error convergence
+import numpy as np
+error_data = np.loadtxt('results/best/Xerr_log.csv', delimiter=',')
+
+# Check initial error requirements
+initial_pos_error = np.linalg.norm(error_data[0, :3])  # Should be ≥ 0.2m
+initial_rot_error = np.linalg.norm(error_data[0, 3:])  # Should be ≥ 30° = 0.524 rad
+
+# Check final convergence
+final_pos_error = np.linalg.norm(error_data[-1, :3])   # Should be near 0
+final_rot_error = np.linalg.norm(error_data[-1, 3:])   # Should be near 0
+
+print(f"Initial position error: {initial_pos_error:.3f} m (requirement: ≥0.2 m)")
+print(f"Initial orientation error: {initial_rot_error:.3f} rad (requirement: ≥0.524 rad)")
+print(f"Final position error: {final_pos_error:.6f} m")
+print(f"Final orientation error: {final_rot_error:.6f} rad")
+```
+
+### Success Criteria
+
+Your Milestone 4 implementation should demonstrate:
+
+✅ **Error Requirements**: Initial configuration with ≥30° orientation error and ≥0.2m position error
+✅ **Error Convergence**: Essentially all initial error driven to zero by end of first trajectory segment
+✅ **Successful Grasp**: Robot successfully picks up and places the cube
+✅ **File Generation**: All required output files created with correct format
+✅ **CoppeliaSim Compatibility**: Generated CSV animates correctly in Scene 8
+✅ **Control Variants**: Demonstrable differences between feedforward, proportional, and PI control
+
+### Troubleshooting Common Issues
+
+**1. Grasp Operation Fails**
+- Increase proportional gains to improve error convergence
+- Verify initial error meets minimum requirements
+- Check cube pose configuration in CoppeliaSim
+
+**2. Robot Behavior is Unstable**
+- Reduce control gains if oscillations occur
+- Verify speed limiting (5 rad/s) is properly implemented
+- Check pseudoinverse tolerance (≥1e-3)
+
+**3. CSV Animation Issues**
+- Verify 13-column format: `[φ, x, y, θ1-θ5, w1-w4, gripper]`
+- Check gripper state transitions (0→1 for grasp, 1→0 for release)
+- Ensure proper time step (dt = 0.01s) throughout
+
+**4. Poor Error Convergence**
+- Tune controller gains systematically
+- Verify all three milestones integrate correctly
+- Check that integral action accumulates properly
+
+This comprehensive testing approach ensures your complete capstone project meets all requirements and demonstrates sophisticated understanding of mobile manipulation control systems.
+
+---
+
+## Submission Preparation
