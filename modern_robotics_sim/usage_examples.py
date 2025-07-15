@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""
+Modern Robotics Capstone Project - Usage Examples
+
+This script demonstrates how to use the mobile manipulation software.
+Run this from the project root directory.
+"""
+
+def main():
+    print("Modern Robotics Capstone Project - Usage Examples")
+    print("=" * 50)
+    print()
+    print("Generate complete submission package:")
+    print("  python main.py")
+    print("  python main.py submission")
+    print()
+    print("Run individual scenarios:")
+    print("  python main.py best")
+    print("  python main.py overshoot") 
+    print("  python main.py newTask")
+    print()
+    print("Run all control modes:")
+    print("  python main.py feedforward")
+    print("  python main.py proportional")
+    print("  python main.py feedforward_pi")
+    print("  python main.py all")
+    print()
+    print("Run tests:")
+    print("  pytest tests/")
+    print("  pytest tests/test_milestone4.py")
+    print("  pytest tests/test_milestone3.py")
+    print("  pytest tests/test_milestone2.py")
+    print()
+    print("Module usage examples:")
+    print("  # Import trajectory generator")
+    print("  from modern_robotics_sim.trajectory_generator import TrajectoryGenerator")
+    print("  ")
+    print("  # Import next state simulator")
+    print("  from modern_robotics_sim.next_state import NextState")
+    print("  ")
+    print("  # Import feedback control")
+    print("  from modern_robotics_sim.feedback_control import FeedbackControl")
+    print("  ")
+    print("  # Import complete capstone runner")
+    print("  from modern_robotics_sim.run_capstone import run_capstone")
+    print("  ")
+    print("  # Import scenario functions")
+    print("  from modern_robotics_sim.scenarios import (")
+    print("      scenario_best, scenario_overshoot, scenario_new_task")
+    print("  )")
+    print()
+    print("Project structure:")
+    print("  main.py                    - Unified command-line interface")
+    print("  modern_robotics_sim/       - Core implementation modules")
+    print("  tests/                     - Comprehensive test suite")
+    print("  output/                    - Generated trajectory files")
+    print("  requirements.txt           - Python dependencies")
+
+if __name__ == "__main__":
+    main()
