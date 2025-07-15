@@ -1119,7 +1119,7 @@ python main.py newTask
 
 #### 1. File Generation Verification
 
-After each test, verify the required files are generated in `results/[scenario]/`:
+After each test, verify the required files are generated in `results/` directories:
 
 ```bash
 # Check results structure
@@ -1134,11 +1134,11 @@ ls -la results/best/
 
 #### 2. CoppeliaSim Animation Testing
 
-1. **Load Scene 8** in CoppeliaSim
+1. **Load CoppeliaSim Scene 8**
 2. **Set cube poses** to match your scenario:
    - Default: Initial at (1,0,0.025), Goal at (0,-1,0.025)
    - Custom: Set according to your newTask configuration
-3. **Load CSV**: Import `youBot_output.csv` using scene's CSV mechanism
+3. **Load CSV**: Import `youBot_output.csv` using scene's CSV import mechanism
 4. **Run simulation** and verify:
    - Robot approaches cube at initial position
    - Gripper closes (grasp operation)
@@ -1177,33 +1177,5 @@ Your Milestone 4 implementation should demonstrate:
 ✅ **Error Convergence**: Essentially all initial error driven to zero by end of first trajectory segment
 ✅ **Successful Grasp**: Robot successfully picks up and places the cube
 ✅ **File Generation**: All required output files created with correct format
-✅ **CoppeliaSim Compatibility**: Generated CSV animates correctly in Scene 8
-✅ **Control Variants**: Demonstrable differences between feedforward, proportional, and PI control
-
-### Troubleshooting Common Issues
-
-**1. Grasp Operation Fails**
-- Increase proportional gains to improve error convergence
-- Verify initial error meets minimum requirements
-- Check cube pose configuration in CoppeliaSim
-
-**2. Robot Behavior is Unstable**
-- Reduce control gains if oscillations occur
-- Verify speed limiting (5 rad/s) is properly implemented
-- Check pseudoinverse tolerance (≥1e-3)
-
-**3. CSV Animation Issues**
-- Verify 13-column format: `[φ, x, y, θ1-θ5, w1-w4, gripper]`
-- Check gripper state transitions (0→1 for grasp, 1→0 for release)
-- Ensure proper time step (dt = 0.01s) throughout
-
-**4. Poor Error Convergence**
-- Tune controller gains systematically
-- Verify all three milestones integrate correctly
-- Check that integral action accumulates properly
-
-This comprehensive testing approach ensures your complete capstone project meets all requirements and demonstrates sophisticated understanding of mobile manipulation control systems.
-
----
-
-## Submission Preparation
+✅ **CoppeliaSim Compatibility**: Generated CSV files animate correctly in Scene 8
+✅ **Control Variants**: Demonstrable differences between best/overshoot performance
