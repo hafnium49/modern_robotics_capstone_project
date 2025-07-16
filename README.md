@@ -1103,18 +1103,6 @@ python main.py feedforward_pi
 python main.py all
 ```
 
-**Expected benefits of integral action**:
-- **Steady-state accuracy**: Elimination of constant errors
-- **Disturbance rejection**: Better handling of modeling uncertainties
-- **Robust performance**: Improved overall system reliability
-
-##### Step 5: Custom Task Testing
-
-```bash
-# Test with custom cube poses
-python main.py newTask
-```
-
 ### Verification Steps
 
 #### 1. File Generation Verification
@@ -1179,3 +1167,105 @@ Your Milestone 4 implementation should demonstrate:
 ✅ **File Generation**: All required output files created with correct format
 ✅ **CoppeliaSim Compatibility**: Generated CSV files animate correctly in Scene 8
 ✅ **Control Variants**: Demonstrable differences between best/overshoot performance
+
+---
+
+## Advanced Features ("Other Things to Try")
+
+This implementation includes several advanced features inspired by the "Other Things to Try" section of the capstone requirements:
+
+### 🔧 **Stationary Base Control**
+Keep the mobile base stationary during manipulation segments (2, 4, 6, 8) while allowing movement during transit segments (1, 3, 5, 7).
+
+```bash
+python main.py stationary_base
+```
+
+Features:
+- Enhanced manipulation precision
+- Reduced base disturbances during grasping
+- Optimized for delicate pick-and-place operations
+
+### ⚖️ **Motion Preference Control**
+Use weighted pseudoinverse to prefer wheel motions over joint motions or vice versa.
+
+```bash
+python main.py motion_preference
+```
+
+Features:
+- Weighted pseudoinverse Jacobian computation
+- Separate scenarios for wheel vs joint preference
+- Demonstrates redundancy resolution strategies
+
+### ⚠️ **Joint Limit Enforcement**
+Enforce realistic joint limits with safety margins during trajectory execution.
+
+```bash
+python main.py joint_limits
+```
+
+Features:
+- youBot arm joint limit enforcement
+- 5-degree safety margins
+- Graceful handling of constrained motions
+
+### 🎯 **Singularity Avoidance**
+Robust control behavior near singular arm configurations.
+
+```bash
+python main.py singularity_avoidance
+```
+
+Features:
+- Damped least squares inverse near singularities
+- Real-time manipulability monitoring
+- Graceful degradation in ill-conditioned poses
+
+### 🏀 **Block Throwing**
+Plan and execute ballistic trajectories to throw the block to a desired landing point.
+
+```bash
+python main.py block_throwing
+```
+
+Features:
+- Ballistic physics calculations
+- Target landing point specification
+- Dynamic gripper release timing
+- **This is the "fun" scenario mentioned in the requirements!**
+
+### 🚧 **Obstacle Avoidance**
+Plan collision-free paths around workspace obstacles.
+
+```bash
+python main.py obstacle_avoidance
+```
+
+Features:
+- RRT-style path planning
+- Multiple obstacle types (spheres, boxes)
+- Safety margin enforcement
+- Collision detection algorithms
+
+### 🔬 **Enhanced Dynamics**
+Configuration for enhanced CoppeliaSim physics with respondable chassis.
+
+```bash
+python main.py enhanced_dynamics
+```
+
+Features:
+- Respondable youBot chassis for block pushing
+- Enhanced contact physics
+- Realistic friction and restitution parameters
+- Dynamic property configuration
+
+### 🚀 **Run All Advanced Scenarios**
+Execute all advanced features in one command:
+
+```bash
+python main.py advanced_all
+```
+
+This will create results for all advanced scenarios in the `results/advanced/` directory.

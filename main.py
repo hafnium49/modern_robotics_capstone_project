@@ -39,6 +39,18 @@ from modern_robotics_sim.run_capstone import (
     run_capstone_simulation, plot_error_results
 )
 
+# Import advanced features for "Other Things to Try"
+try:
+    from modern_robotics_sim.enhanced_scenarios import (
+        scenario_stationary_base, scenario_motion_preference, scenario_joint_limits,
+        scenario_singularity_avoidance, scenario_block_throwing, scenario_obstacle_avoidance,
+        scenario_enhanced_dynamics, run_all_advanced_scenarios
+    )
+    ADVANCED_FEATURES_AVAILABLE = True
+except ImportError:
+    ADVANCED_FEATURES_AVAILABLE = False
+    print("⚠️ Advanced features not available. Run with basic scenarios only.")
+
 
 def create_readme_file(output_dir, controller_type, Kp_gains, Ki_gains, 
                       cube_init=None, cube_goal=None, notes=""):
@@ -671,21 +683,42 @@ Examples:
     python main.py best               # Run best scenario only
     python main.py overshoot          # Run overshoot scenario only
     python main.py newTask            # Run custom task scenario only
-    python main.py all                # Run all scenarios
+    python main.py all                # Run all basic scenarios
     python main.py feedforward        # Run feedforward-only control
     python main.py proportional       # Run proportional control
     python main.py feedforward_pi     # Run feedforward + PI control
+    
+    # Advanced scenarios (Other Things to Try):
+    python main.py stationary_base    # Base stationary during manipulation
+    python main.py motion_preference  # Weighted pseudoinverse demo
+    python main.py joint_limits       # Joint limit enforcement
+    python main.py singularity_avoidance  # Singularity robust control
+    python main.py block_throwing     # Throw block to target point
+    python main.py obstacle_avoidance # Path planning around obstacles
+    python main.py enhanced_dynamics  # CoppeliaSim physics enhancement
+    python main.py advanced_all       # Run all advanced scenarios
+    
     python main.py best --output ./my_results  # Custom output directory
     python main.py --verify           # Verify submission package
         """
     )
     
+    # Basic scenario choices
+    basic_scenarios = ['submission', 'best', 'overshoot', 'newTask', 'feedforward', 
+                      'proportional', 'feedforward_pi', 'all']
+    
+    # Advanced scenario choices (from "Other Things to Try")
+    advanced_scenarios = ['stationary_base', 'motion_preference', 'joint_limits',
+                         'singularity_avoidance', 'block_throwing', 'obstacle_avoidance',
+                         'enhanced_dynamics', 'advanced_all']
+    
+    all_scenarios = basic_scenarios + (advanced_scenarios if ADVANCED_FEATURES_AVAILABLE else [])
+    
     parser.add_argument(
         'scenario',
         nargs='?',
         default='submission',
-        choices=['submission', 'best', 'overshoot', 'newTask', 'feedforward', 
-                'proportional', 'feedforward_pi', 'all'],
+        choices=all_scenarios,
         help='Scenario to run (default: submission)'
     )
     
@@ -728,9 +761,34 @@ Examples:
             success = run_feedforward_pi_scenario(args.output)
         elif args.scenario == 'all':
             success = run_all_scenarios()
+        
+        # Advanced scenarios from "Other Things to Try"
+        elif args.scenario == 'stationary_base' and ADVANCED_FEATURES_AVAILABLE:
+            success = scenario_stationary_base(args.output or "results/stationary_base")
+        elif args.scenario == 'motion_preference' and ADVANCED_FEATURES_AVAILABLE:
+            success = scenario_motion_preference(args.output or "results/motion_preference")
+        elif args.scenario == 'joint_limits' and ADVANCED_FEATURES_AVAILABLE:
+            success = scenario_joint_limits(args.output or "results/joint_limits")
+        elif args.scenario == 'singularity_avoidance' and ADVANCED_FEATURES_AVAILABLE:
+            success = scenario_singularity_avoidance(args.output or "results/singularity_avoidance")
+        elif args.scenario == 'block_throwing' and ADVANCED_FEATURES_AVAILABLE:
+            success = scenario_block_throwing(args.output or "results/block_throwing")
+        elif args.scenario == 'obstacle_avoidance' and ADVANCED_FEATURES_AVAILABLE:
+            success = scenario_obstacle_avoidance(args.output or "results/obstacle_avoidance")
+        elif args.scenario == 'enhanced_dynamics' and ADVANCED_FEATURES_AVAILABLE:
+            success = scenario_enhanced_dynamics(args.output or "results/enhanced_dynamics")
+        elif args.scenario == 'advanced_all' and ADVANCED_FEATURES_AVAILABLE:
+            results = run_all_advanced_scenarios(args.output or "results/advanced")
+            success = all(result["success"] for result in results.values())
+        
         else:
-            print(f"Unknown scenario: {args.scenario}")
-            return 1
+            if args.scenario in advanced_scenarios and not ADVANCED_FEATURES_AVAILABLE:
+                print(f"Advanced scenario '{args.scenario}' not available.")
+                print("Please ensure enhanced_scenarios.py is properly installed.")
+                return 1
+            else:
+                print(f"Unknown scenario: {args.scenario}")
+                return 1
         
         end_time = time.time()
         
@@ -753,6 +811,21 @@ Examples:
                 print("  📁 results/newTask/        - Custom task")
                 print("\nTo create zip file: Select all files → Right-click → 'Send to Compressed folder'")
                 print("\nTo verify: python main.py --verify")
+            elif args.scenario == 'advanced_all':
+                print(f"\n🚀 All advanced scenarios completed!")
+                print("\nAdvanced features implemented:")
+                print("  🔧 Stationary base during manipulation")
+                print("  ⚖️ Weighted pseudoinverse for motion preference")
+                print("  ⚠️ Joint limit enforcement")
+                print("  🎯 Singularity avoidance")
+                print("  🏀 Block throwing trajectory")
+                print("  🚧 Obstacle avoidance planning")
+                print("  🔬 Enhanced CoppeliaSim dynamics")
+                print(f"\nCheck results/advanced/ for all outputs")
+            elif args.scenario in advanced_scenarios:
+                print(f"\n🚀 Advanced scenario '{args.scenario}' completed!")
+                print("This implements features from 'Other Things to Try' section")
+                print(f"Check {args.output or 'results/' + args.scenario}/ for output files")
             else:
                 print(f"\n✓ Scenario '{args.scenario}' completed successfully!")
                 print(f"Check results/{args.scenario}/ for output files")
