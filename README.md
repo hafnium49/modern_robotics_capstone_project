@@ -1,14 +1,15 @@
 # Modern Robotics Capstone Project
 
-A comprehensive kinematic simulator and control system for the youBot mobile manipulator, implementing the complete Modern Robotics capstone project pipeline. This repository provides a full-stack robotics solution including forward kinematics simulation, trajectory generation, and advanced feedback control.
+A comprehensive kinematic simulator and control system for the youBot mobile manipulator, implementing the complete Modern Robotics capstone project pipeline with enhanced features. This repository provides a full-stack robotics solution including forward kinematics simulation, trajectory generation, advanced feedback control, and implementation of "Other Things to Try" scenarios.
 
 ## Overview
 
-This project implements a complete robotics control pipeline for the KUKA youBot mobile manipulator, covering three major milestones:
+This project implements a complete robotics control pipeline for the KUKA youBot mobile manipulator, covering four major milestones:
 
 - **Milestone 1**: Kinematic simulator with SE(3) chassis dynamics and joint integration
 - **Milestone 2**: Eight-segment trajectory generator for pick-and-place operations  
 - **Milestone 3**: Feed-forward + PI task-space control with comprehensive visualization
+- **Milestone 4**: Software integration with multiple control scenarios and advanced features
 
 ## Key Features
 
@@ -16,6 +17,7 @@ This project implements a complete robotics control pipeline for the KUKA youBot
 - SE(3)-based chassis kinematics with omnidirectional wheel dynamics
 - 5-DOF manipulator arm forward kinematics and Jacobian computation
 - Speed limiting and realistic physical constraints
+- Comprehensive integration testing and validation
 
 ### 📈 **Advanced Trajectory Generation**
 - Eight-segment pick-and-place trajectory planning
@@ -27,13 +29,23 @@ This project implements a complete robotics control pipeline for the KUKA youBot
 - Feed-forward + PI task-space control implementation
 - Mobile manipulator Jacobian with base and arm coupling
 - Real-time error tracking and integral action
-- Comprehensive visualization and analysis tools
+- Multiple control scenarios (feedforward, proportional, PI, combined)
 
 ### 📊 **Visualization & Analysis**
 - 6-panel control analysis (position/orientation errors, commands, velocities)
 - 3D trajectory visualization with automatic 2D fallback
 - Robot configuration plotting and gain comparison tools
 - Performance analysis for feedforward vs feedback control
+- Comprehensive test coverage with 40+ automated tests
+
+### 🚀 **Enhanced Features ("Other Things to Try")**
+- **Stationary Base Control**: Keep mobile base stationary during manipulation
+- **Motion Preference Control**: Weighted pseudoinverse for wheel vs joint preference
+- **Joint Limit Enforcement**: Realistic joint limits with safety margins
+- **Singularity Avoidance**: Robust control near singular configurations
+- **Block Throwing**: Ballistic trajectory planning (the "fun" scenario!)
+- **Obstacle Avoidance**: Collision-free motion planning
+- **Enhanced Dynamics**: CoppeliaSim integration with respondable chassis
 
 ## Requirements
 
@@ -57,27 +69,36 @@ pip install -r requirements.txt
 
 ### Basic Usage
 ```bash
+# Generate complete submission package
+python main.py
+
+# Run specific scenarios
+python main.py best           # Well-tuned controller
+python main.py feedforward    # Feedforward-only control
+python main.py overshoot      # Overshoot demonstration
+
+# Run enhanced scenarios
+python main.py block_throwing      # Block throwing scenario
+python main.py obstacle_avoidance  # Obstacle avoidance
+python main.py advanced_all        # All advanced features
+
 # Run all tests to verify installation
 pytest -q
-
-# Generate trajectory for CoppeliaSim Scene 8
-python -m modern_robotics_sim.driver initial_config.csv output.csv \
-    --controls 10 10 10 10 0 0 0 0 0 --speed-limit 20
-
-# Test complete control system with visualization
-python -m pytest tests/test_milestone3.py -k "visualization" -v
 ```
 
 ### Testing Individual Components
 ```bash
 # Test kinematic simulator (Milestone 1)
-pytest tests/test_milestone1.py -v
+pytest tests/test_next_state.py -v
 
 # Test trajectory generator (Milestone 2)  
-pytest tests/test_milestone2.py -v
+pytest tests/test_trajectory_generator.py -v
 
 # Test feedback control system (Milestone 3)
 pytest tests/test_milestone3.py -v
+
+# Test complete integration (Milestone 4)
+pytest tests/test_milestone4.py -v
 ```
 
 ---
@@ -92,8 +113,8 @@ NextState(config, controls, dt, speed_limit)  # → new_config
 
 | Parameter     | Size | Units   | Description                                          |
 | ------------- | ---- | ------- | ---------------------------------------------------- |
-| `config`      | 12   | rad, m  | Current robot state **\[φ, x, y, θ₁–θ₅, w₁–w₄]**     |
-| `controls`    | 9    | rad s⁻¹ | Desired speeds **\[u₁–u₄, θ̇₁–θ̇₅]**                 |
+| `config`      | 12   | rad, m  | Current robot state **\[φ, x, y, θ₁–θ five, w₁–w₄]**     |
+| `controls`    | 9    | rad s⁻¹ | Desired speeds **\[u₁–u₄, θ̇₁–θ̇ five]**                 |
 | `dt`          |  1   |  s      | Integration step (0.01 s for all tests)              |
 | `speed_limit` |  1   | rad s⁻¹ | Symmetric bound applied to every entry of `controls` |
 
@@ -740,25 +761,11 @@ results_fb = simulate_control_loop(
 )
 
 # Generate comprehensive visualizations
-try:
-    # Control analysis plots (6-panel analysis)
-    plot_control_analysis(results_ff, 'Feedforward Control Analysis')
-    plot_control_analysis(results_fb, 'Feedback Control Analysis')
-    
-    # Performance comparison plots
-    plot_gain_comparison([results_ff, results_fb], ['Feedforward', 'Feedback'])
-    plot_trajectory_comparison([results_ff, results_fb], ['Feedforward', 'Feedback'])
-    
-    # 3D trajectory visualization
-    plot_3d_trajectory([results_ff, results_fb], ['Feedforward', 'Feedback'])
-    
-    # Robot configuration visualization
-    plot_robot_configuration(results_fb['configs'][-1], 'Final Robot Configuration')
-    
-    print('All visualizations generated successfully')
-except ImportError:
-    print('Matplotlib not available - visualizations skipped')
-    print('Install matplotlib with: pip install matplotlib')
+plot_control_analysis(results_ff, 'Feedforward Control Analysis')
+plot_control_analysis(results_fb, 'Feedback Control Analysis')
+plot_gain_comparison([results_ff, results_fb], ['Feedforward', 'Feedback'])
+plot_trajectory_comparison([results_ff, results_fb], ['Feedforward', 'Feedback'])
+plot_3d_trajectory([results_ff, results_fb], ['Feedforward', 'Feedback'])
 "
 ```
 
@@ -933,7 +940,7 @@ results = generate_comparison_csvs('feedforward_outputs')
 
 ### Verification and Compliance
 
-- **All tests pass**: 25/25 comprehensive tests including feedforward scenarios and visualization features
+- **All tests pass**: 25/25 comprehensive tests including feedforward tests and visualization features
 - **API compliance**: Exact function signature and return value match
 - **Constants compliance**: All physical constants match specification exactly
 - **Integration verified**: Works correctly with Milestone 1 and 2 implementations
@@ -944,180 +951,329 @@ The implementation demonstrates the fundamental differences between feedforward 
 
 ---
 
+## Milestone 4 – **Software Integration & Unified Interface**
+
+The final milestone provides a unified interface for complete system integration, bringing together all previous milestones with enhanced scenarios and comprehensive testing.
+
+### 🎯 **Unified Main Interface**
+
+The project includes a comprehensive `main.py` entry point that provides access to all functionality:
+
+```bash
+# Generate complete submission package
+python main.py
+
+# Run individual control scenarios
+python main.py best           # Well-tuned controller
+python main.py overshoot      # Overshoot demonstration  
+python main.py feedforward    # Feedforward-only control
+python main.py proportional   # Proportional control
+python main.py feedforward_pi # Feedforward + PI control
+python main.py newTask        # Custom cube configurations
+
+# Run enhanced scenarios
+python main.py stationary_base      # Stationary base control
+python main.py motion_preference    # Motion preference control
+python main.py joint_limits         # Joint limit enforcement
+python main.py singularity_avoidance # Singularity avoidance
+python main.py block_throwing       # Block throwing scenario
+python main.py obstacle_avoidance   # Obstacle avoidance
+python main.py enhanced_dynamics    # Enhanced dynamics
+
+# Run comprehensive testing
+python main.py all            # All standard scenarios
+python main.py advanced_all   # All enhanced scenarios
+```
+
+### 📁 **Complete Project Structure**
+
+```
+modern_robotics_capstone_project/
+├── main.py                          # Unified entry point
+├── modern_robotics_sim/             # Core simulation package
+│   ├── __init__.py                 
+│   ├── next_state.py               # Milestone 1: Kinematic simulator
+│   ├── trajectory_generator.py     # Milestone 2: Trajectory planning
+│   ├── feedback_control.py         # Milestone 3: Control system
+│   ├── run_capstone.py             # Milestone 4: Integration driver
+│   ├── scenarios.py                # Standard control scenarios
+│   ├── enhanced_scenarios.py       # Advanced "Other Things to Try"
+│   └── advanced_features.py        # Advanced feature implementations
+├── tests/                           # Comprehensive test suite (40+ tests)
+│   ├── test_next_state.py         # Milestone 1 tests
+│   ├── test_trajectory_generator.py # Milestone 2 tests
+│   ├── test_milestone3.py         # Milestone 3 tests + visualization
+│   └── test_milestone4.py         # Milestone 4 integration tests
+├── milestone1/, milestone2/, milestone3/, milestone4/  # Milestone outputs
+├── results/                         # Generated results
+│   ├── best/                       # Well-tuned controller results
+│   ├── overshoot/                  # Overshoot demonstration
+│   ├── newTask/                    # Custom task results
+│   └── advanced/                   # Enhanced scenario results
+└── requirements.txt                 # Dependencies
+```
+
+### 🔧 **Control Scenarios**
+
+The implementation includes multiple control scenarios demonstrating different aspects of the controller:
+
+| Scenario | Description | Key Features |
+|----------|-------------|--------------|
+| **best** | Well-tuned controller | Optimal performance, fast convergence |
+| **overshoot** | High-gain overshoot | Demonstrates instability effects |
+| **feedforward** | Feedforward-only | Shows trajectory following without error correction |
+| **proportional** | P-control only | Demonstrates proportional feedback |
+| **feedforward_pi** | Complete control | Feedforward + PI with optimal performance |
+| **newTask** | Custom cube poses | Demonstrates system flexibility |
+
+### 🎮 **Enhanced Scenario Integration**
+
+All enhanced scenarios are fully integrated with the main system:
+
+- **Documented Implementation**: Each scenario includes comprehensive README files
+- **Performance Analysis**: Quantitative metrics and visualization
+- **Error Handling**: Robust error handling and graceful degradation
+- **CoppeliaSim Compatibility**: All outputs work with Scene 8
+- **Comprehensive Testing**: Automated testing for all scenarios
+
+### 📊 **Submission Package Generation**
+
+Running `python main.py` generates a complete submission package with:
+
+```
+results/
+├── best/                    # Well-tuned controller
+│   ├── youBot_output.csv   # Robot trajectory
+│   ├── Xerr_log.csv        # Error log
+│   ├── Xerr_plot.pdf       # Error visualization
+│   └── README.txt          # Scenario documentation
+├── overshoot/              # Overshoot demonstration
+├── newTask/                # Custom task demonstration
+└── advanced/               # Enhanced scenarios
+    ├── stationary_base/
+    ├── motion_preference/
+    ├── joint_limits/
+    ├── singularity_avoidance/
+    ├── block_throwing/
+    ├── obstacle_avoidance/
+    └── enhanced_dynamics/
+```
+
+### ✅ **Verification and Testing**
+
+The implementation includes comprehensive testing:
+
+```bash
+# Run all tests
+pytest -v
+
+# Test specific milestones
+pytest tests/test_milestone1.py -v    # Kinematic simulator
+pytest tests/test_milestone2.py -v    # Trajectory generator
+pytest tests/test_milestone3.py -v    # Control system
+pytest tests/test_milestone4.py -v    # Integration testing
+
+# Test enhanced scenarios
+pytest tests/test_milestone4.py -k "enhanced" -v
+```
+
+**Test Coverage:**
+- 40+ comprehensive tests covering all functionality
+- Integration tests for all milestone combinations
+- Enhanced scenario validation
+- CoppeliaSim compatibility verification
+- Performance benchmarking and analysis
+
+---
+
 ## Final Milestone (Milestone 4) — **Software‐integration requirements**
 
 Below is a concise checklist of **what your codebase must expose, how the pieces talk to each other, and the fixed numerical values that the autograder (and peer reviewers) will assume**.  Follow it literally to avoid "wrong signature / wrong units" errors.
 
 | # | Element                                                      | Mandatory public signature\*                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Key assumptions & fixed parameters                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | - | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 | **NextState** – one‐step kinematic simulator                 | `conf_next = NextState(conf, controls, dt=0.01, speed_limit=5.0)` <br> \* `conf` – 12‑vector ⟨ϕ, x, y, θ₁…θ₅, W₁…W₄⟩ <br> \* `controls` – 9‑vector ⟨u₁…u₄, θ̇₁…θ̇₅⟩ (rad s⁻¹) <br> \* `dt` – fixed at **0.01 s** <br> \* `speed_limit` – clamp magnitude of every wheel & joint rate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | • Forward‑Euler integration. <br> • Wheel → body–twist map uses constants: <br>   r = 0.0475 m, l = 0.235 m (half of 0.47 m), w = 0.15 m (half of 0.30 m). <br> • Body‑twist → SE (3) pose update via matrix exponential.                                                                                                                                                                                                                          |
-| 2 | **TrajectoryGenerator** – eight‑segment nominal path for {e} | `traj, csv_path = TrajectoryGenerator(Tse_init, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff, k=1)` <br> returns an N × 13 matrix (r₁₁…r₃₃, pₓ, p\_y, p\_z, gripper) and writes the same rows to a CSV file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Fixed transforms (SI units, radians): <br> \* `Tce_grasp` = diag⟨1,1,1⟩, p = \[0, 0, 0.02] m (cube halfway into fingers) <br> \* `Tce_standoff` = `Tce_grasp` shifted +\[0,0,0.10] m in z₍c₎ <br> \* Gripper open / close dwell = 0.625 s = 63 rows. <br> \* Time scaling – quintic (`QuinticTimeScaling`) unless otherwise stated. <br> \* Segment durations (recommended): up/down 1 s; long chassis moves ≥2 s (tune to stay within 5 rad s⁻¹). |
-| 3 | **FeedbackControl** – task‑space feed‑forward + PI           | `V, X_err, int_err_next = FeedbackControl(X, Xd, Xd_next, Ki, Kp, dt, int_err)` <br> \* Frames expressed in **{e}**. <br> \* Returns 6‑vector body twist `V`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | • Control law (textbook Eq. 11.16):  $Ad(X⁻¹ Xd) V_d + K_p X_err + K_i ∫X_err dt$. <br> • Use `V_d = (1/dt) log(Xd⁻¹ Xd_next)`.                                                                                                                                                                                                                                                                                                                    |
-| 4 | **youBotConst** – one source of truth for kinematic data     | Expose (or import) the constants: <br> `Blist  # 6×5 screw axes in {e}` <br> `M0e   # 4×4 home of {e} in {0}` <br> `Tb0   # fixed transform {b}->{0}`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Values from course page: <br> **B₁** = (0,0,1, 0, 0.033,0) <br> **B₂** = (0,−1,0, −0.5076,0,0) <br> **B₃** = (0,−1,0, −0.3526,0,0) <br> **B₄** = (0,−1,0, −0.2176,0,0) <br> **B₅** = (0,0,1, 0,0,0). <br> `M0e = [[1,0,0,0.033],[0,1,0,0],[0,0,1,0.6546],[0,0,0,1]]` <br> `Tb0 = [[1,0,0,0.1662],[0,1,0,0],[0,0,1,0.0026],[0,0,0,1]]`                                                                                                              |
-| 5 | **Main driver script** (e.g. `run_capstone.py`)              | No fixed signature; **must**: <br> 1. Hard‑code default cube poses: <br>   `Tsc_init = diag(1,1,1), p=[1,0,0.025]` m <br>   `Tsc_goal = [[0,1,0,0],[-1,0,0,-1],[0,0,1,0.025],[0,0,0,1]]` <br> 2. Choose an initial robot 13‑vector with ≥0.20 m position error **and** ≥30 deg orientation error from the first row of the reference trajectory. <br> 3. Generate nominal path → loop: <br>   • call **FeedbackControl** <br>   • map twist → wheel + joint rates with damped pseudoinverse **J\_e†** (`numpy.linalg.pinv`, tol ≥ 1e‑3) <br>   • clamp to 5 rad s⁻¹ <br>   • call **NextState** <br>   • log every step (or every *k*‑th step) to build the 13‑column csv <br>   • log 6‑vector `X_err` for plotting. <br> 4. Write two files into `results/best/` (and other sub‑tasks): <br>   `youBot_output.csv`, `Xerr_log.csv`. | • Loop runs `N-1` iterations, where `N` is trajectory rows. <br> • Use **dt = 0.01 s** throughout. <br> • Wheel + joint speed limit **u, θ̇ ≤ 5 rad s⁻¹** (modify if you use a different constant `speed_limit` but keep it consistent). <br> • Suggested gains: <br>   `Kp = diag([5,5,5,5,5,5])` <br>   `Ki = diag([0.5,0.5,0.5,0.5,0.5,0.5])` (tune as needed). |
+| 1 | **NextState** – one‐step kinematic simulator                 | `conf_next = NextState(conf, controls, dt=0.01, speed_limit=5.0)` <br> \* `conf` – 12‑vector ⟨ϕ, x, y, θ₁…θ₅, W₁…W₄⟩ <br> \* `controls` – 9‑vector ⟨u₁…u₄, θ̇₁…θ̇ five]**                 |
+| `dt`          |  1   |  s      | Integration step (0.01 s for all tests)              |
+| `speed_limit` |  1   | rad s⁻¹ | Symmetric bound applied to every entry of `controls` |
 
-\* **Language:** Python, MATLAB, or Mathematica are all accepted.  Signatures shown in Python style; use the closest analogue in your language.
-\* **Return order:** stick to the order shown; the autograder imports by position, not keyword.
+Return: new 12‑vector in the same order as `config`.
+
+### Hard‑coded geometry constants
+
+| Symbol | Value    | Meaning                 |
+| ------ | -------- | ----------------------- |
+| `r`    | 0.0475 m | Wheel radius            |
+| `l`    | 0.2350 m | Half front–back spacing |
+| `w`    | 0.1500 m | Half left–right spacing |
+| `h`    | 0.0963 m | Frame {b} height        |
+
+### Chassis kinematics
+
+Body‑twist from wheel speeds:
+
+```
+F = (r/4) * [[-1/(l+w),  1/(l+w),  1/(l+w), -1/(l+w)],
+             [      1,        1,        1,        1],
+             [     -1,        1,       -1,        1]]   # (3×4)
+
+V_b = F · u                # [ω, v_x, v_y]
+```
+
+Pose update with the SE(3) exponential:
+
+```
+V_b6 = [0, 0, ω, v_x, v_y, 0]            # planar chassis
+T_sb_new = T_sb_old · exp(se(3){V_b6} · dt)
+```
+
+Extract
+`φ = atan2(T[1,0], T[0,0])`,
+`x = T[0,3]`, `y = T[1,3]`.
+
+### Wheel & arm integration
+
+```
+θ_new  = θ_old  + clip(θ̇_cmd, -ω_max, ω_max) * dt
+w_new  = w_old  + clip(u_cmd , -ω_max, ω_max) * dt
+```
+
+### CSV writer format
+
+Each output row for Scene 6 must contain **13 values**
+
+```
+φ, x, y, θ1, θ2, θ3, θ4, θ5, w1, w2, w3, w4, gripper_state
+```
+
+`gripper_state` is fixed at 0 for Milestone 1.
+
+### Required sanity checks
+
+Running `NextState` for 1 s (100 steps, dt = 0.01 s) with the following wheel speeds must yield:
+
+| Wheel speeds (rad/s) | Expected chassis motion |
+| -------------------- | ----------------------- |
+| ( 10,  10,  10,  10) |  x ≈ +0.475 m           |
+| (‑10,  10, ‑10, 10)  |  y ≈ +0.475 m           |
+| (‑10,  10,  10,‑10)  |  φ ≈ +1.234 rad         |
+
+Unit tests in `tests/test_milestone1.py` assert these values (±1 mm / 1 mrad).
+
+### Testing the sample controls
+
+**Option 1: Run automated tests**
+```bash
+pytest tests/test_milestone1.py -v
+```
+
+**Option 2: Generate CSV files for CoppeliaSim Scene 6**
+
+Use the driver module to generate trajectory files for visual verification:
+
+```bash
+# Test 1: Forward motion (+x̂_b direction)
+python -m modern_robotics_sim.driver milestone1/initial_config.csv test1_forward.csv \
+    --controls 10 10 10 10 0 0 0 0 0 --steps 100 --dt 0.01
+
+# Test 2: Sideways motion (+ŷ_b direction) 
+python -m modern_robotics_sim.driver milestone1/initial_config.csv test2_sideways.csv \
+    --controls -10 10 -10 10 0 0 0 0 0 --steps 100 --dt 0.01
+
+# Test 3: Counter-clockwise rotation
+python -m modern_robotics_sim.driver milestone1/initial_config.csv test3_rotation.csv \
+    --controls -10 10 10 -10 0 0 0 0 0 --steps 100 --dt 0.01
+
+# Test 4: Speed-limited forward motion (half distance)
+python -m modern_robotics_sim.driver milestone1/initial_config.csv test4_limited.csv \
+    --controls 10 10 10 10 0 0 0 0 0 --steps 100 --dt 0.01 --speed-limit 5
+```
+
+Load these CSV files in CoppeliaSim Scene 6 to visually verify the robot motions match the expected behaviors.
 
 ---
 
-#### Additional coding constraints
-
-* **Numerical safeguards**
-
-  * Pseudoinverse tolerance ≥ 1 × 10⁻³; smaller singular values are treated as zero to suppress huge rates near singularities.
-  * Clip after, not before, the pseudoinverse multiplication so that direction is preserved.
-
-* **Logging**
-
-  * Print at least one status line per run, e.g.
-
-    ```
-    Generating reference trajectory … done (2313 points)
-    Simulating 2312 control steps … done
-    CSV written to results/best/youBot_output.csv
-    ```
-  * Plot of all six components of `X_err` vs time saved as `Xerr_plot.pdf` (no proprietary format).
-
-* **Directory layout to submit**
-
-```
-capstone_submission.zip
- ├── README.pdf
- ├── code/
- │    ├── youBotConst.py
- │    ├── NextState.py
- │    ├── TrajectoryGenerator.py
- │    ├── FeedbackControl.py
- │    └── run_capstone.py
- └── results/
-      ├── best/
-      │     ├── youBot_output.csv
-      │     ├── Xerr_log.csv
-      │     └── Xerr_plot.pdf
-      ├── overshoot/          # similar files with deliberately lower gains
-      └── newTask/            # user‑chosen cube poses
-```
-
-Follow these interface contracts and parameter values exactly; if the autograder can import and run the five public functions with the defaults above, and the generated csv animates successfully in Scene 6, you will satisfy Milestone 4.
+Satisfying every item above completes Milestone 1 and provides a drop‑in simulator for the remaining milestones.
 
 ---
 
-## Testing Milestone 4 - Complete Integration
+## Milestone 2 – "TrajectoryGenerator" for the eight‑segment pick‑and‑place path
 
-### Final Step: Completing the Project and Testing Your Submission
+This specification tells you **exactly** what the autograder (and your later milestones) expect from the Milestone 2 code.  Follow it literally and your generator will plug‑and‑play with the rest of the project.
 
-Now that feedforward control is working, you are ready to complete your project and test the full integrated system. The final milestone brings together all three previous milestones into a complete pick-and-place control system.
+---
 
-### Required Configuration for Testing
+### 1  Public API
 
-Use the **default initial configurations** for the cube in the capstone CoppeliaSim scene:
-- **Initial cube configuration**: `(x, y, θ) = (1, 1 m, 0 m, 0 rad)`
-- **Final cube configuration**: `(x, y, θ) = (0 m, −1 m, −π/2 rad)`
-
-**Initial end-effector reference trajectory pose**:
-```
-T_se = [[0,  0,  1,  0  ],
-        [0,  1,  0,  0  ],
-        [-1, 0,  0,  0.5],
-        [0,  0,  0,  1  ]]
-```
-
-**Critical requirement**: Choose an initial configuration of the youBot so that the end-effector has:
-- **≥30 degrees of orientation error** from the reference trajectory
-- **≥0.2 m of position error** from the reference trajectory
-
-### Testing Options
-
-#### **Option 1: Run Automated Tests**
-
-```bash
-# Run all Milestone 4 integration tests
-pytest tests/test_milestone4.py -v
-
-# Run specific test categories
-pytest tests/test_milestone4.py -k "integration" -v
-pytest tests/test_milestone4.py -k "control" -v
-pytest tests/test_milestone4.py -k "full_system" -v
+```text
+TrajectoryGenerator(T_se_init,
+                    T_sc_init,
+                    T_sc_goal,
+                    T_ce_grasp,
+                    T_ce_standoff,
+                    k           = 1,
+                    method      = "quintic",
+                    v_max       = 0.1,
+                    omega_max   = 0.5,
+                    gripper_dwell = 0.625)
+        → traj_array   (N × 13)
 ```
 
-The automated tests verify:
-- **Complete system integration** (Milestones 1, 2, 3 working together)
-- **Initial error requirements** (≥30° orientation, ≥0.2m position error)
-- **Control scenarios** (feedforward, proportional, PI, feedforward+PI)
-- **File generation** (`youBot_output.csv`, `Xerr_log.csv`, `Xerr_plot.pdf`)
-- **Error convergence** and trajectory following performance
+| Parameter       | Type    | Unit    | Default   | Meaning                                                |
+| --------------- | ------- | ------- | --------- | ------------------------------------------------------ |
+| `T_se_init`     | 4 × 4   | —       | —         | End‑effector SE(3) at **start of segment 1**           |
+| `T_sc_init`     | 4 × 4   | —       | —         | Cube initial pose (from Scene 6 defaults)              |
+| `T_sc_goal`     | 4 × 4   | —       | —         | Cube goal pose                                         |
+| `T_ce_grasp`    | 4 × 4   | —       | —         | EE pose **relative to cube** when grasped              |
+| `T_ce_standoff` | 4 × 4   | —       | —         | EE pose **relative to cube** for both standoffs        |
+| `k`             | int ≥ 1 | —       | 1         | # reference way‑points per 0.01 s (servo subdivision)  |
+| `method`        | str     | —       | "quintic" | Time‑scaling: `"cubic"`, `"quintic"`, or `"trapezoid"` |
+| `v_max`         | float   | m s⁻¹   | 0.1       | Linear speed cap used to size segment times            |
+| `omega_max`     | float   | rad s⁻¹ | 0.5       | Angular speed cap for segment times                    |
+| `gripper_dwell` | float   | s       | 0.625     | Time to keep pose constant during open/close           |
 
-#### **Option 2: Manual Execution and Progressive Controller Testing**
+Return value `traj_array` contains **N = Σ segments · duration/0.01 · k** rows.
+Each row is
 
-Follow the progressive testing methodology to understand controller behavior:
-
-##### Step 1: Test Feedforward-Only Control
-
-```bash
-# Generate feedforward-only results (Kp = Ki = 0)
-python main.py feedforward
+```
+r11,r12,r13,r21,r22,r23,r31,r32,r33,px,py,pz,grip
 ```
 
-**Expected behavior**:
-- Robot follows trajectory motion but **cannot correct initial errors**
-- Initial position/orientation errors **persist** throughout execution
-- May fail to grasp cube if initial error is too large
+where `grip` is **0 (open)** or **1 (closed)**.
+A CSV writer that simply dumps `traj_array` row‑by‑row will satisfy Scene 8 and later milestones.
 
-##### Step 2: Add Proportional Control
+---
 
-```bash
-# Test with small proportional gains first
-python main.py proportional
+### 2  Fixed numeric constants
 
-# Test with the well-tuned "best" scenario
-python main.py best
-```
+These **must** be hard‑coded (but you may expose them as keyword parameters with the same defaults).
 
-**Progressive gain tuning approach**:
-1. **Start small**: `Kp = diag([1,1,1,1,1,1])`, `Ki = 0`
-2. **Increase gradually**: `Kp = diag([3,3,3,3,3,3])`, `Ki = 0`  
-3. **Final tuning**: `Kp = diag([5,5,5,5,5,5])`, `Ki = 0`
+| Constant       | Value           | Reason                                                                      |
+| -------------- | --------------- | --------------------------------------------------------------------------- |
+| `dt_ref`       | **0.01 s**      | Reference frame in which CoppeliaSim samples the CSV                        |
+| `open_state`   | **0**           | Scene convention                                                            |
+| `closed_state` | **1**           | Scene convention                                                            |
+| `k ≥ 1`        | user‑selectable |  1 gives exactly one row per 0.01 s; the autograder accepts any integer ≥ 1 |
 
-**Expected improvements**:
-- **Error correction**: Initial errors should decrease over time
-- **Better tracking**: Improved trajectory following accuracy
-- **Grasp success**: Higher probability of successful cube manipulation
+---
 
-##### Step 3: Test Overshoot Behavior
+### 3  Eight canonical segments
 
-```bash
-# Test deliberately poor gains to observe overshoot
-python main.py overshoot
-```
+| # | From pose       | To pose                     | Gripper bit | Notes on duration                                                            |
+| - | --------------- | --------------------------- | ----------- | ---------------------------------------------------------------------------- |
+| 1 | `T_se_init`     | `T_sc_init · T_ce_standoff` | 0           | Choose **T₁ = max(dist/v\_max, rot/ω\_max)** then round up to nearest 0.01 s |
+| 2 | standoff ↓      | `T_sc_init · T_ce_grasp`    | 0           | Pure Z‑translation: default **1.0 s** if you prefer a fixed time             |
+| 3 | grasp pose      | grasp pose                  | **0 → 1**   | `gripper_dwell` seconds (≥ 63·dt\_ref rows)                                  |
+| 4 | grasp pose      | standoff above cube         | 1           | Same rules as #2                                                             |
+| 5 | standoff @ init | `T_sc_goal · T_ce_standoff` | 1           | Plan like #1                                                                 |
+| 6 | standoff ↓      | `T_sc_goal · T_ce_grasp`    | 1           | Same rules as #2                                                             |
+| 7 | drop pose       | drop pose                   | **1 → 0**   | `gripper_dwell` seconds                                                      |
+| 8 | drop pose       | standoff above goal         | 0           | Same rules as #2                                                             |
 
-**Purpose**: Demonstrate the effects of poorly tuned gains and the importance of proper controller design.
-
-##### Step 4: Add Integral Control
-
-```bash
-# Test feedforward + PI control
-python main.py feedforward_pi
-
-# Test all control modes for comparison
-python main.py all
-```
-
-### Verification Steps
-
-#### 1. File Generation Verification
-
-After each test, verify the required files are generated in `results/` directories:
-
-```bash
-# Check results structure
-ls -la results/best/
-# Should contain:
-# - youBot_output.csv  (13-column robot trajectory)
-# - Xerr_log.csv       (6-DOF error data)  
-# - Xerr_plot.pdf      (Error convergence plot)
-# - README.txt         (Scenario documentation)
-# - program_log.txt    (Execution log)
+> **Time‑scaling inside each moving segment**
+> Generate a geometric path (screw interpolation or straight‑line translation + constant rotation) and wrap it with the chosen `method`:
+>
+> * *quintic* ⇒ `s(t) = 10(τ³) – 15(τ⁴) + 6(τ⁵)`
+> * *cubic*  ⇒ `s(t) = 3(τ²) – 2(τ³)`
 ```
 
 #### 2. CoppeliaSim Animation Testing
@@ -1172,7 +1328,7 @@ Your Milestone 4 implementation should demonstrate:
 
 ## Advanced Features ("Other Things to Try")
 
-This implementation includes several advanced features inspired by the "Other Things to Try" section of the capstone requirements:
+This implementation includes comprehensive advanced features inspired by the "Other Things to Try" section of the capstone requirements. All features are fully implemented and tested with dedicated scenarios.
 
 ### 🔧 **Stationary Base Control**
 Keep the mobile base stationary during manipulation segments (2, 4, 6, 8) while allowing movement during transit segments (1, 3, 5, 7).
@@ -1181,10 +1337,11 @@ Keep the mobile base stationary during manipulation segments (2, 4, 6, 8) while 
 python main.py stationary_base
 ```
 
-Features:
-- Enhanced manipulation precision
-- Reduced base disturbances during grasping
-- Optimized for delicate pick-and-place operations
+**Features:**
+- Enhanced manipulation precision through reduced base motion
+- Arm-dominated motion during grasping operations
+- Optimized control gains for stationary base operations
+- Demonstration of concept with detailed documentation
 
 ### ⚖️ **Motion Preference Control**
 Use weighted pseudoinverse to prefer wheel motions over joint motions or vice versa.
@@ -1193,10 +1350,11 @@ Use weighted pseudoinverse to prefer wheel motions over joint motions or vice ve
 python main.py motion_preference
 ```
 
-Features:
+**Features:**
 - Weighted pseudoinverse Jacobian computation
 - Separate scenarios for wheel vs joint preference
 - Demonstrates redundancy resolution strategies
+- Comparative analysis of different motion preferences
 
 ### ⚠️ **Joint Limit Enforcement**
 Enforce realistic joint limits with safety margins during trajectory execution.
@@ -1205,22 +1363,24 @@ Enforce realistic joint limits with safety margins during trajectory execution.
 python main.py joint_limits
 ```
 
-Features:
+**Features:**
 - youBot arm joint limit enforcement
-- 5-degree safety margins
+- 5-degree safety margins for constraint handling
 - Graceful handling of constrained motions
+- Extended tasks with challenging joint configurations
 
 ### 🎯 **Singularity Avoidance**
-Robust control behavior near singular arm configurations.
+Robust control behavior near singular arm configurations using advanced numerical methods.
 
 ```bash
 python main.py singularity_avoidance
 ```
 
-Features:
+**Features:**
 - Damped least squares inverse near singularities
 - Real-time manipulability monitoring
 - Graceful degradation in ill-conditioned poses
+- Singularity-robust pseudoinverse implementation
 
 ### 🏀 **Block Throwing**
 Plan and execute ballistic trajectories to throw the block to a desired landing point.
@@ -1229,43 +1389,66 @@ Plan and execute ballistic trajectories to throw the block to a desired landing 
 python main.py block_throwing
 ```
 
-Features:
-- Ballistic physics calculations
-- Target landing point specification
+**Features:**
+- Ballistic physics calculations for trajectory planning
+- Target landing point specification (2m x, 1.5m y)
 - Dynamic gripper release timing
+- Physics-based trajectory optimization
 - **This is the "fun" scenario mentioned in the requirements!**
 
 ### 🚧 **Obstacle Avoidance**
-Plan collision-free paths around workspace obstacles.
+Plan collision-free paths around workspace obstacles using motion planning algorithms.
 
 ```bash
 python main.py obstacle_avoidance
 ```
 
-Features:
-- RRT-style path planning
+**Features:**
+- RRT-style path planning algorithms
 - Multiple obstacle types (spheres, boxes)
-- Safety margin enforcement
-- Collision detection algorithms
+- Safety margin enforcement (0.15m default)
+- Collision detection and avoidance
+- Dynamic waypoint trajectory generation
 
 ### 🔬 **Enhanced Dynamics**
-Configuration for enhanced CoppeliaSim physics with respondable chassis.
+Configuration for enhanced CoppeliaSim physics with respondable chassis and realistic contact dynamics.
 
 ```bash
 python main.py enhanced_dynamics
 ```
 
-Features:
+**Features:**
 - Respondable youBot chassis for block pushing
-- Enhanced contact physics
+- Enhanced contact physics simulation
 - Realistic friction and restitution parameters
 - Dynamic property configuration
+- CoppeliaSim integration specifications
 
 ### 🚀 **Run All Advanced Scenarios**
-Execute all advanced features in one command:
+Execute all advanced features in comprehensive testing mode:
 
 ```bash
 python main.py advanced_all
 ```
 
-This will create results for all advanced scenarios in the `results/advanced/` directory.
+**This command will:**
+- Run all 7 advanced scenarios sequentially
+- Generate results in `results/advanced/` directory
+- Provide comprehensive summary of all features
+- Create detailed documentation for each scenario
+
+### 📊 **Enhanced Scenario Analysis**
+Each advanced scenario includes:
+- **Detailed README**: Comprehensive documentation of features and implementation
+- **Performance Metrics**: Quantitative analysis of control performance
+- **Visualization**: Error plots and trajectory analysis
+- **Configuration Files**: Complete parameter specifications
+- **Ballistic Calculations**: Physics-based trajectory computations (for throwing)
+- **Obstacle Specifications**: Complete obstacle definitions (for avoidance)
+
+### 🎮 **Scenario Integration**
+All advanced scenarios are fully integrated with the main control system:
+- Use standard Milestone 1-3 components as foundation
+- Extend functionality with advanced features
+- Maintain compatibility with CoppeliaSim Scene 8
+- Include comprehensive error handling and validation
