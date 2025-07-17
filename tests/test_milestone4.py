@@ -624,7 +624,7 @@ class TestEnhancedScenarios:
     
     def setup_method(self):
         """Set up test environment for enhanced scenarios."""
-        self.output_dir = os.path.join(os.path.dirname(__file__), "..", "test_enhanced_scenarios")
+        self.output_dir = os.path.join(os.path.dirname(__file__), "..", "milestone4", "enhanced_scenarios")
         os.makedirs(self.output_dir, exist_ok=True)
         
     def test_enhanced_scenarios_import(self):
@@ -848,7 +848,7 @@ class TestEnhancedScenarios:
         )
         
         # Test with invalid output directory (should create it)
-        invalid_dir = os.path.join(self.output_dir, "nonexistent", "deep", "path")
+        invalid_dir = os.path.join(self.output_dir, "error_handling", "nonexistent", "deep", "path")
         
         # These should handle directory creation
         success1 = scenario_stationary_base(invalid_dir + "_stationary")
@@ -1003,7 +1003,7 @@ class TestEnhancedIntegration:
         assert Tce_standoff.shape == (4, 4)
         
         # Enhanced scenario should be able to use these
-        output_dir = os.path.join(os.path.dirname(__file__), "..", "test_integration")
+        output_dir = os.path.join(os.path.dirname(__file__), "..", "milestone4", "integration_test")
         os.makedirs(output_dir, exist_ok=True)
         
         success = scenario_stationary_base(output_dir)
@@ -1013,7 +1013,7 @@ class TestEnhancedIntegration:
         """Test that all enhanced scenarios produce complete documentation."""
         from modern_robotics_sim.enhanced_scenarios import run_all_advanced_scenarios
         
-        output_dir = os.path.join(os.path.dirname(__file__), "..", "test_documentation")
+        output_dir = os.path.join(os.path.dirname(__file__), "..", "milestone4", "documentation_test")
         
         # Run all scenarios
         results = run_all_advanced_scenarios(output_dir)
