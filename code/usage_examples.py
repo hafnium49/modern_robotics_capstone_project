@@ -50,7 +50,7 @@ def main():
     print("  )")
     print()
     print("Project structure:")
-    print("  main.py                    - Unified command-line interface")
+    print("  code/main.py               - Unified command-line interface")
     print("  code/                      - Core implementation modules")
     print("  tests/                     - Comprehensive test suite")
     print("  output/                    - Generated trajectory files")

@@ -70,17 +70,17 @@ pip install -r requirements.txt
 ### Basic Usage
 ```bash
 # Generate complete submission package
-python main.py
+python code/main.py
 
 # Run specific scenarios
-python main.py best           # Well-tuned controller
-python main.py feedforward    # Feedforward-only control
-python main.py overshoot      # Overshoot demonstration
+python code/main.py best           # Well-tuned controller
+python code/main.py feedforward    # Feedforward-only control
+python code/main.py overshoot      # Overshoot demonstration
 
 # Run enhanced scenarios
-python main.py block_throwing      # Block throwing scenario
-python main.py obstacle_avoidance  # Obstacle avoidance
-python main.py advanced_all        # All advanced features
+python code/main.py block_throwing      # Block throwing scenario
+python code/main.py obstacle_avoidance  # Obstacle avoidance
+python code/main.py advanced_all        # All advanced features
 
 # Run all tests to verify installation
 pytest -q
@@ -961,28 +961,28 @@ The project includes a comprehensive `main.py` entry point that provides access 
 
 ```bash
 # Generate complete submission package
-python main.py
+python code/main.py
 
 # Run individual control scenarios
-python main.py best           # Well-tuned controller
-python main.py overshoot      # Overshoot demonstration  
-python main.py feedforward    # Feedforward-only control
-python main.py proportional   # Proportional control
-python main.py feedforward_pi # Feedforward + PI control
-python main.py newTask        # Custom cube configurations
+python code/main.py best           # Well-tuned controller
+python code/main.py overshoot      # Overshoot demonstration  
+python code/main.py feedforward    # Feedforward-only control
+python code/main.py proportional   # Proportional control
+python code/main.py feedforward_pi # Feedforward + PI control
+python code/main.py newTask        # Custom cube configurations
 
 # Run enhanced scenarios
-python main.py stationary_base      # Stationary base control
-python main.py motion_preference    # Motion preference control
-python main.py joint_limits         # Joint limit enforcement
-python main.py singularity_avoidance # Singularity avoidance
-python main.py block_throwing       # Block throwing scenario
-python main.py obstacle_avoidance   # Obstacle avoidance
-python main.py enhanced_dynamics    # Enhanced dynamics
+python code/main.py stationary_base      # Stationary base control
+python code/main.py motion_preference    # Motion preference control
+python code/main.py joint_limits         # Joint limit enforcement
+python code/main.py singularity_avoidance # Singularity avoidance
+python code/main.py block_throwing       # Block throwing scenario
+python code/main.py obstacle_avoidance   # Obstacle avoidance
+python code/main.py enhanced_dynamics    # Enhanced dynamics
 
 # Run comprehensive testing
-python main.py all            # All standard scenarios
-python main.py advanced_all   # All enhanced scenarios
+python code/main.py all            # All standard scenarios
+python code/main.py advanced_all   # All enhanced scenarios
 ```
 
 ### 📁 **Complete Project Structure**
@@ -1038,7 +1038,7 @@ All enhanced scenarios are fully integrated with the main system:
 
 ### 📊 **Submission Package Generation**
 
-Running `python main.py` generates a complete submission package with:
+Running `python code/main.py` generates a complete submission package with:
 
 ```
 results/
@@ -1778,28 +1778,28 @@ The project includes a comprehensive `main.py` entry point that provides access 
 
 ```bash
 # Generate complete submission package
-python main.py
+python code/main.py
 
 # Run individual control scenarios
-python main.py best           # Well-tuned controller
-python main.py overshoot      # Overshoot demonstration  
-python main.py feedforward    # Feedforward-only control
-python main.py proportional   # Proportional control
-python main.py feedforward_pi # Feedforward + PI control
-python main.py newTask        # Custom cube configurations
+python code/main.py best           # Well-tuned controller
+python code/main.py overshoot      # Overshoot demonstration  
+python code/main.py feedforward    # Feedforward-only control
+python code/main.py proportional   # Proportional control
+python code/main.py feedforward_pi # Feedforward + PI control
+python code/main.py newTask        # Custom cube configurations
 
 # Run enhanced scenarios
-python main.py stationary_base      # Stationary base control
-python main.py motion_preference    # Motion preference control
-python main.py joint_limits         # Joint limit enforcement
-python main.py singularity_avoidance # Singularity avoidance
-python main.py block_throwing       # Block throwing scenario
-python main.py obstacle_avoidance   # Obstacle avoidance
-python main.py enhanced_dynamics    # Enhanced dynamics
+python code/main.py stationary_base      # Stationary base control
+python code/main.py motion_preference    # Motion preference control
+python code/main.py joint_limits         # Joint limit enforcement
+python code/main.py singularity_avoidance # Singularity avoidance
+python code/main.py block_throwing       # Block throwing scenario
+python code/main.py obstacle_avoidance   # Obstacle avoidance
+python code/main.py enhanced_dynamics    # Enhanced dynamics
 
 # Run comprehensive testing
-python main.py all            # All standard scenarios
-python main.py advanced_all   # All enhanced scenarios
+python code/main.py all            # All standard scenarios
+python code/main.py advanced_all   # All enhanced scenarios
 ```
 
 ### 📁 **Complete Project Structure**
@@ -1855,7 +1855,7 @@ All enhanced scenarios are fully integrated with the main system:
 
 ### 📊 **Submission Package Generation**
 
-Running `python main.py` generates a complete submission package with:
+Running `python code/main.py` generates a complete submission package with:
 
 ```
 results/
@@ -1963,7 +1963,7 @@ This implementation is fully ready for capstone submission with:
 
 2. **Run Complete System**:
    ```bash
-   python main.py  # Generates complete submission package
+   python code/main.py  # Generates complete submission package
    ```
 
 3. **Test Everything**:
@@ -1973,8 +1973,8 @@ This implementation is fully ready for capstone submission with:
 
 4. **Explore Enhanced Features**:
    ```bash
-   python main.py block_throwing      # Try the "fun" scenario!
-   python main.py advanced_all        # Run all enhanced features
+   python code/main.py block_throwing      # Try the "fun" scenario!
+   python code/main.py advanced_all        # Run all enhanced features
    ```
 
 5. **Animate in CoppeliaSim**:

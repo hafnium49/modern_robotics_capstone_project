@@ -6,7 +6,7 @@ This script provides a unified interface for the complete capstone project,
 combining all functionality for simulation, analysis, and submission generation.
 
 Usage:
-    python main.py                      # Generate complete submissi    required_files = [
+    python code/main.py                      # Generate complete submissi    required_files = [
         "code/__init__.py",
         "code/driver.py", 
         "code/next_state.py",
@@ -14,8 +14,8 @@ Usage:
         "code/run_capstone.py",
         "code/scenarios.py",
         "code/feedback_control.py",ge
-    python main.py [scenario]           # Run specific scenario  
-    python main.py --help               # Show detailed help
+    python code/main.py [scenario]           # Run specific scenario  
+    python code/main.py --help               # Show detailed help
 
 Scenarios:
     submission     - Generate complete submission package (default)
@@ -37,7 +37,7 @@ import numpy as np
 from pathlib import Path
 
 # Add the project root to the path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import milestone components
@@ -368,25 +368,25 @@ def main():
     print("=" * 50)
     print()
     print("Generate complete submission package:")
-    print("  python main.py")
-    print("  python main.py submission")
+    print("  python code/main.py")
+    print("  python code/main.py submission")
     print()
     print("Run individual scenarios:")
-    print("  python main.py best")
-    print("  python main.py overshoot") 
-    print("  python main.py newTask")
+    print("  python code/main.py best")
+    print("  python code/main.py overshoot") 
+    print("  python code/main.py newTask")
     print()
     print("Run all control modes:")
-    print("  python main.py feedforward")
-    print("  python main.py proportional")
-    print("  python main.py feedforward_pi")
-    print("  python main.py all")
+    print("  python code/main.py feedforward")
+    print("  python code/main.py proportional")
+    print("  python code/main.py feedforward_pi")
+    print("  python code/main.py all")
     print()
     print("Custom output directory:")
-    print("  python main.py best --output ./my_results")
+    print("  python code/main.py best --output ./my_results")
     print()
     print("Verification:")
-    print("  python main.py --verify")
+    print("  python code/main.py --verify")
 
 if __name__ == "__main__":
     main()
@@ -487,15 +487,15 @@ Each results directory contains:
 USAGE INSTRUCTIONS
 -----------------
 Generate complete submission package:
-  python main.py
+  python code/main.py
 
 Run individual scenarios:
-  python main.py best
-  python main.py overshoot
-  python main.py newTask
+  python code/main.py best
+  python code/main.py overshoot
+  python code/main.py newTask
 
 Run all scenarios:
-  python main.py all
+  python code/main.py all
 
 COPPELISIM ANIMATION
 ------------------
@@ -685,28 +685,28 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    python main.py                    # Generate complete submission package
-    python main.py submission         # Generate submission package
-    python main.py best               # Run best scenario only
-    python main.py overshoot          # Run overshoot scenario only
-    python main.py newTask            # Run custom task scenario only
-    python main.py all                # Run all basic scenarios
-    python main.py feedforward        # Run feedforward-only control
-    python main.py proportional       # Run proportional control
-    python main.py feedforward_pi     # Run feedforward + PI control
+    python code/main.py                    # Generate complete submission package
+    python code/main.py submission         # Generate submission package
+    python code/main.py best               # Run best scenario only
+    python code/main.py overshoot          # Run overshoot scenario only
+    python code/main.py newTask            # Run custom task scenario only
+    python code/main.py all                # Run all basic scenarios
+    python code/main.py feedforward        # Run feedforward-only control
+    python code/main.py proportional       # Run proportional control
+    python code/main.py feedforward_pi     # Run feedforward + PI control
     
     # Advanced scenarios (Other Things to Try):
-    python main.py stationary_base    # Base stationary during manipulation
-    python main.py motion_preference  # Weighted pseudoinverse demo
-    python main.py joint_limits       # Joint limit enforcement
-    python main.py singularity_avoidance  # Singularity robust control
-    python main.py block_throwing     # Throw block to target point
-    python main.py obstacle_avoidance # Path planning around obstacles
-    python main.py enhanced_dynamics  # CoppeliaSim physics enhancement
-    python main.py advanced_all       # Run all advanced scenarios
+    python code/main.py stationary_base    # Base stationary during manipulation
+    python code/main.py motion_preference  # Weighted pseudoinverse demo
+    python code/main.py joint_limits       # Joint limit enforcement
+    python code/main.py singularity_avoidance  # Singularity robust control
+    python code/main.py block_throwing     # Throw block to target point
+    python code/main.py obstacle_avoidance # Path planning around obstacles
+    python code/main.py enhanced_dynamics  # CoppeliaSim physics enhancement
+    python code/main.py advanced_all       # Run all advanced scenarios
     
-    python main.py best --output ./my_results  # Custom output directory
-    python main.py --verify           # Verify submission package
+    python code/main.py best --output ./my_results  # Custom output directory
+    python code/main.py --verify           # Verify submission package
         """
     )
     
@@ -817,7 +817,7 @@ Examples:
                 print("  📁 results/overshoot/      - Overshoot demonstration")
                 print("  📁 results/newTask/        - Custom task")
                 print("\nTo create zip file: Select all files → Right-click → 'Send to Compressed folder'")
-                print("\nTo verify: python main.py --verify")
+                print("\nTo verify: python code/main.py --verify")
             elif args.scenario == 'advanced_all':
                 print(f"\n🚀 All advanced scenarios completed!")
                 print("\nAdvanced features implemented:")

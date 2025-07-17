@@ -8,40 +8,40 @@ The project has been successfully refactored into a unified `main.py` interface 
 
 ### Generate Complete Submission Package (Default)
 ```bash
-python main.py
+python code/main.py
 # OR
-python main.py submission
+python code/main.py submission
 ```
 
 ### Run Individual Scenarios
 ```bash
-python main.py best           # Well-tuned controller
-python main.py overshoot      # Overshoot demonstration  
-python main.py newTask        # Custom task
-python main.py feedforward    # Feedforward-only control
-python main.py proportional   # Proportional control
-python main.py feedforward_pi # Feedforward + PI control
+python code/main.py best           # Well-tuned controller
+python code/main.py overshoot      # Overshoot demonstration  
+python code/main.py newTask        # Custom task
+python code/main.py feedforward    # Feedforward-only control
+python code/main.py proportional   # Proportional control
+python code/main.py feedforward_pi # Feedforward + PI control
 ```
 
 ### Custom Output Directory
 ```bash
-python main.py best --output ./my_results
-python main.py feedforward --output ./test_output
+python code/main.py best --output ./my_results
+python code/main.py feedforward --output ./test_output
 ```
 
 ### Run All Scenarios
 ```bash
-python main.py all
+python code/main.py all
 ```
 
 ### Verify Submission Package
 ```bash
-python main.py --verify
+python code/main.py --verify
 ```
 
 ### Help
 ```bash
-python main.py --help
+python code/main.py --help
 ```
 
 ## 📁 File Structure
@@ -79,7 +79,7 @@ The unified `main.py` provides:
 
 ## 🎯 Submission Ready
 
-The unified interface ensures that running `python main.py` generates a complete, submission-ready package containing:
+The unified interface ensures that running `python code/main.py` generates a complete, submission-ready package containing:
 
 - ✅ All required documentation
 - ✅ Complete source code
@@ -89,8 +89,8 @@ The unified interface ensures that running `python main.py` generates a complete
 
 ## 📦 Quick Submission Process
 
-1. Run: `python main.py`
-2. Verify: `python main.py --verify`
+1. Run: `python code/main.py`
+2. Verify: `python code/main.py --verify`
 3. Create zip: Select all files → Right-click → "Send to Compressed folder"
 4. Submit: Upload the zip file
 

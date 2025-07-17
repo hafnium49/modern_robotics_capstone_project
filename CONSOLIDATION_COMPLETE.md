@@ -37,24 +37,24 @@ The consolidated `main.py` now provides:
 
 ### Single Command Submission
 ```bash
-python main.py  # Generates complete submission package
+python code/main.py  # Generates complete submission package
 ```
 
 ### Individual Scenarios
 ```bash
-python main.py best           # Well-tuned controller
-python main.py overshoot      # Overshoot demonstration
-python main.py newTask        # Custom task
-python main.py feedforward    # Feedforward-only
-python main.py proportional   # Proportional control
-python main.py feedforward_pi # Feedforward + PI
+python code/main.py best           # Well-tuned controller
+python code/main.py overshoot      # Overshoot demonstration
+python code/main.py newTask        # Custom task
+python code/main.py feedforward    # Feedforward-only
+python code/main.py proportional   # Proportional control
+python code/main.py feedforward_pi # Feedforward + PI
 ```
 
 ### Advanced Features
 ```bash
-python main.py --verify                    # Verify submission package
-python main.py all                         # Run all scenarios
-python main.py best --output ./my_results  # Custom output directory
+python code/main.py --verify                    # Verify submission package
+python code/main.py all                         # Run all scenarios
+python code/main.py best --output ./my_results  # Custom output directory
 ```
 
 ## Benefits of Consolidation
@@ -77,4 +77,4 @@ python main.py best --output ./my_results  # Custom output directory
 
 The refactoring and consolidation is complete. The project now has a single, comprehensive `main.py` that handles all submission generation, scenario execution, and verification tasks.
 
-**Usage**: Simply run `python main.py` to generate the complete capstone submission package!
+**Usage**: Simply run `python code/main.py` to generate the complete capstone submission package!

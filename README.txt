@@ -83,15 +83,15 @@ Each results directory contains:
 USAGE INSTRUCTIONS
 -----------------
 Generate complete submission package:
-  python main.py
+  python code/main.py
 
 Run individual scenarios:
-  python main.py best
-  python main.py overshoot
-  python main.py newTask
+  python code/main.py best
+  python code/main.py overshoot
+  python code/main.py newTask
 
 Run all scenarios:
-  python main.py all
+  python code/main.py all
 
 COPPELISIM ANIMATION
 ------------------
