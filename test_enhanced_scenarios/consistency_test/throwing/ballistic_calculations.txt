@@ -1,0 +1,16 @@
+Ballistic Trajectory Calculations
+===================================
+
+Target landing point: [2.  1.5]
+Release height: 0.8 m
+Release velocity: 4.0 m/s
+Flight time: 0.404 s
+Required horizontal velocity: 6.190 m/s
+Gravity: 9.81 m/s²
+
+Physics equations used:
+  t_flight = sqrt(2 * h / g)
+  v_horizontal = distance / t_flight
+  trajectory: x(t) = x0 + vx*t
+               y(t) = y0 + vy*t
+               z(t) = z0 - 0.5*g*t²

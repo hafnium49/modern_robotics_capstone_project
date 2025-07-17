@@ -307,6 +307,8 @@ def plot_error_results(error_log, output_dir="results/best"):
         output_dir: directory for output files
     """
     try:
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend to avoid tkinter issues
         import matplotlib.pyplot as plt
         
         # Create time vector
