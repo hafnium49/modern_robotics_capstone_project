@@ -3,7 +3,7 @@ import sys
 import numpy as np
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from modern_robotics_sim.next_state import NextState
+from code.next_state import NextState
 
 
 def run_for_one_second(controls, speed_limit=20.0):

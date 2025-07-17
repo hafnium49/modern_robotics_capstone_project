@@ -8,7 +8,7 @@ This directory contains the complete implementation of the Modern Robotics Capst
 
 ```
 modern_robotics_capstone_project/
-├── modern_robotics_sim/           # Core simulation package
+├── code/           # Core simulation package
 │   ├── __init__.py               # Package initialization
 │   ├── next_state.py            # Milestone 1: Kinematic simulator
 │   ├── trajectory_generator.py   # Milestone 2: Pick-and-place trajectory

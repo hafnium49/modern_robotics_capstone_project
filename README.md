@@ -194,19 +194,19 @@ Use the driver module to generate trajectory files for visual verification:
 
 ```bash
 # Test 1: Forward motion (+x̂_b direction)
-python -m modern_robotics_sim.driver milestone1/initial_config.csv test1_forward.csv \
+python -m code.driver milestone1/initial_config.csv test1_forward.csv \
     --controls 10 10 10 10 0 0 0 0 0 --steps 100 --dt 0.01
 
 # Test 2: Sideways motion (+ŷ_b direction) 
-python -m modern_robotics_sim.driver milestone1/initial_config.csv test2_sideways.csv \
+python -m code.driver milestone1/initial_config.csv test2_sideways.csv \
     --controls -10 10 -10 10 0 0 0 0 0 --steps 100 --dt 0.01
 
 # Test 3: Counter-clockwise rotation
-python -m modern_robotics_sim.driver milestone1/initial_config.csv test3_rotation.csv \
+python -m code.driver milestone1/initial_config.csv test3_rotation.csv \
     --controls -10 10 10 -10 0 0 0 0 0 --steps 100 --dt 0.01
 
 # Test 4: Speed-limited forward motion (half distance)
-python -m modern_robotics_sim.driver milestone1/initial_config.csv test4_limited.csv \
+python -m code.driver milestone1/initial_config.csv test4_limited.csv \
     --controls 10 10 10 10 0 0 0 0 0 --steps 100 --dt 0.01 --speed-limit 5
 ```
 
@@ -355,7 +355,7 @@ pytest tests/test_milestone2.py -v
 Run the driver script to generate your trajectory CSV file:
 
 ```bash
-python modern_robotics_sim/driver.py --milestone 2 --csv
+python code/driver.py --milestone 2 --csv
 ```
 
 This will create `milestone2/eight_segment_traj.csv` using the **default cube configuration**:
@@ -365,7 +365,7 @@ This will create `milestone2/eight_segment_traj.csv` using the **default cube co
 For a **custom cube configuration**, you can edit the values in `driver.py` or create your own test script. For example:
 
 ```python
-from modern_robotics_sim.trajectory_generator import TrajectoryGenerator
+from code.trajectory_generator import TrajectoryGenerator
 
 # Custom configuration
 cube_initial = (0.5, 0.5, 0)           # x=0.5m, y=0.5m, θ=0 radians
@@ -626,10 +626,10 @@ Run the feedback control module directly to test feedforward behavior with compr
 
 ```bash
 # Run with automatic visualization
-python -m modern_robotics_sim.feedback_control --feedforward-test --visualize
+python -m code.feedback_control --feedforward-test --visualize
 
 # Run with custom scenarios and plotting
-python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0.1 0.05 0.02 --plot-results
+python -m code.feedback_control --feedforward-test --initial-error 0.1 0.05 0.02 --plot-results
 ```
 
 Generate and visualize control analysis using the test framework:
@@ -796,7 +796,7 @@ This feedforward testing methodology helps you understand the fundamental differ
 
 The Milestone 3 implementation provides a complete **Feed-Forward + PI Task-Space Control** system for the youBot mobile manipulator:
 
-#### Core Implementation: `modern_robotics_sim/feedback_control.py`
+#### Core Implementation: `code/feedback_control.py`
 **Primary module containing:**
 - `FeedbackControl()` function - Main control function matching exact API specification
 - `FeedbackController` class - Stateful wrapper for easier use in simulation loops
@@ -839,7 +839,7 @@ The implementation follows the exact control equations specified:
 
 #### Basic Function Call
 ```python
-from modern_robotics_sim.feedback_control import FeedbackControl
+from code.feedback_control import FeedbackControl
 import numpy as np
 
 # Set up poses and gains
@@ -857,7 +857,7 @@ V_cmd, controls, X_err, integral_error = FeedbackControl(
 
 #### Stateful Controller
 ```python
-from modern_robotics_sim.feedback_control import FeedbackController
+from code.feedback_control import FeedbackController
 
 controller = FeedbackController()  # Uses default gains
 config = np.zeros(12)  # Robot configuration
@@ -869,8 +869,8 @@ V_cmd, controls, X_err = controller.control(
 
 #### Integration with Other Milestones
 ```python
-from modern_robotics_sim.next_state import NextState
-from modern_robotics_sim.trajectory_generator import TrajectoryGenerator
+from code.next_state import NextState
+from code.trajectory_generator import TrajectoryGenerator
 
 # Generate trajectory (Milestone 2)
 trajectory = TrajectoryGenerator(Tse_init, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff)
@@ -990,7 +990,7 @@ python main.py advanced_all   # All enhanced scenarios
 ```
 modern_robotics_capstone_project/
 ├── main.py                          # Unified entry point
-├── modern_robotics_sim/             # Core simulation package
+├── code/             # Core simulation package
 │   ├── __init__.py                 
 │   ├── next_state.py               # Milestone 1: Kinematic simulator
 │   ├── trajectory_generator.py     # Milestone 2: Trajectory planning
@@ -1172,19 +1172,19 @@ Use the driver module to generate trajectory files for visual verification:
 
 ```bash
 # Test 1: Forward motion (+x̂_b direction)
-python -m modern_robotics_sim.driver milestone1/initial_config.csv test1_forward.csv \
+python -m code.driver milestone1/initial_config.csv test1_forward.csv \
     --controls 10 10 10 10 0 0 0 0 0 --steps 100 --dt 0.01
 
 # Test 2: Sideways motion (+ŷ_b direction) 
-python -m modern_robotics_sim.driver milestone1/initial_config.csv test2_sideways.csv \
+python -m code.driver milestone1/initial_config.csv test2_sideways.csv \
     --controls -10 10 -10 10 0 0 0 0 0 --steps 100 --dt 0.01
 
 # Test 3: Counter-clockwise rotation
-python -m modern_robotics_sim.driver milestone1/initial_config.csv test3_rotation.csv \
+python -m code.driver milestone1/initial_config.csv test3_rotation.csv \
     --controls -10 10 10 -10 0 0 0 0 0 --steps 100 --dt 0.01
 
 # Test 4: Speed-limited forward motion (half distance)
-python -m modern_robotics_sim.driver milestone1/initial_config.csv test4_limited.csv \
+python -m code.driver milestone1/initial_config.csv test4_limited.csv \
     --controls 10 10 10 10 0 0 0 0 0 --steps 100 --dt 0.01 --speed-limit 5
 ```
 
@@ -1333,7 +1333,7 @@ pytest tests/test_milestone2.py -v
 Run the driver script to generate your trajectory CSV file:
 
 ```bash
-python modern_robotics_sim/driver.py --milestone 2 --csv
+python code/driver.py --milestone 2 --csv
 ```
 
 This will create `milestone2/eight_segment_traj.csv` using the **default cube configuration**:
@@ -1343,7 +1343,7 @@ This will create `milestone2/eight_segment_traj.csv` using the **default cube co
 For a **custom cube configuration**, you can edit the values in `driver.py` or create your own test script. For example:
 
 ```python
-from modern_robotics_sim.trajectory_generator import TrajectoryGenerator
+from code.trajectory_generator import TrajectoryGenerator
 
 # Custom configuration
 cube_initial = (0.5, 0.5, 0)           # x=0.5m, y=0.5m, θ=0 radians
@@ -1604,10 +1604,10 @@ Run the feedback control module directly to test feedforward behavior with compr
 
 ```bash
 # Run with automatic visualization
-python -m modern_robotics_sim.feedback_control --feedforward-test --visualize
+python -m code.feedback_control --feedforward-test --visualize
 
 # Run with custom scenarios and plotting
-python -m modern_robotics_sim.feedback_control --feedforward-test --initial-error 0.1 0.05 0.02 --plot-results
+python -m code.feedback_control --feedforward-test --initial-error 0.1 0.05 0.02 --plot-results
 ```
 
 Generate and visualize control analysis using the test framework:
@@ -1807,7 +1807,7 @@ python main.py advanced_all   # All enhanced scenarios
 ```
 modern_robotics_capstone_project/
 ├── main.py                          # Unified entry point
-├── modern_robotics_sim/             # Core simulation package
+├── code/             # Core simulation package
 │   ├── __init__.py                 
 │   ├── next_state.py               # Milestone 1: Kinematic simulator
 │   ├── trajectory_generator.py     # Milestone 2: Trajectory planning

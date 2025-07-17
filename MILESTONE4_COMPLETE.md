@@ -68,7 +68,7 @@ T_se = ⎡ 0  0  1  0 ⎤
 
 ```
 modern_robotics_capstone_project/
-├── modern_robotics_sim/           # Core package
+├── code/           # Core package
 │   ├── next_state.py             # Milestone 1: Kinematics
 │   ├── trajectory_generator.py   # Milestone 2: Trajectory
 │   ├── feedback_control.py       # Milestone 3: Control

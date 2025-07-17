@@ -15,12 +15,12 @@ except ImportError:
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from modern_robotics_sim.next_state import NextState
-from modern_robotics_sim.feedback_control import (
+from code.next_state import NextState
+from code.feedback_control import (
     FeedbackControl, FeedbackController, chassis_to_se3, get_F6, compute_jacobian,
     R, L, W, DT, SPEED_LIMIT, PINV_TOLERANCE, TB0, M0E, BLIST
 )
-from modern_robotics_sim.trajectory_generator import TrajectoryGenerator
+from code.trajectory_generator import TrajectoryGenerator
 
 
 # Utility Functions (merged from demo_milestone3.py and generate_feedforward_csv.py)

@@ -5,7 +5,7 @@ import csv
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from modern_robotics_sim.trajectory_generator import (
+from code.trajectory_generator import (
     TrajectoryGenerator,
     OPEN_STATE,
     CLOSED_STATE,

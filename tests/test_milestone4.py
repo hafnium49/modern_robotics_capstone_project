@@ -16,7 +16,7 @@ import sys
 # Add the parent directory to the path to import modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from modern_robotics_sim.run_capstone import (
+from code.run_capstone import (
     create_default_cube_poses,
     create_grasp_transforms, 
     create_initial_ee_pose,
@@ -28,9 +28,9 @@ from modern_robotics_sim.run_capstone import (
     DT_CAPSTONE,
     SPEED_LIMIT
 )
-from modern_robotics_sim.trajectory_generator import TrajectoryGenerator
-from modern_robotics_sim.feedback_control import FeedbackControl, compute_jacobian
-from modern_robotics_sim.next_state import NextState
+from code.trajectory_generator import TrajectoryGenerator
+from code.feedback_control import FeedbackControl, compute_jacobian
+from code.next_state import NextState
 import modern_robotics as mr
 
 
@@ -242,7 +242,7 @@ class TestMilestone4Simulation:
         Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
         
         # Run short simulation by modifying trajectory generator
-        from modern_robotics_sim.trajectory_generator import TrajectoryGenerator
+        from code.trajectory_generator import TrajectoryGenerator
         
         # Get just first few points of trajectory
         Tse_init = compute_current_ee_pose(np.zeros(12))
@@ -630,7 +630,7 @@ class TestEnhancedScenarios:
     def test_enhanced_scenarios_import(self):
         """Test that enhanced scenarios module imports correctly."""
         try:
-            from modern_robotics_sim.enhanced_scenarios import (
+            from code.enhanced_scenarios import (
                 scenario_stationary_base, scenario_motion_preference,
                 scenario_joint_limits, scenario_singularity_avoidance,
                 scenario_block_throwing, scenario_obstacle_avoidance,
@@ -643,7 +643,7 @@ class TestEnhancedScenarios:
             
     def test_scenario_stationary_base(self):
         """Test stationary base manipulation scenario."""
-        from modern_robotics_sim.enhanced_scenarios import scenario_stationary_base
+        from code.enhanced_scenarios import scenario_stationary_base
         
         output_dir = os.path.join(self.output_dir, "stationary_base")
         
@@ -668,7 +668,7 @@ class TestEnhancedScenarios:
             
     def test_scenario_motion_preference(self):
         """Test motion preference control scenario."""
-        from modern_robotics_sim.enhanced_scenarios import scenario_motion_preference
+        from code.enhanced_scenarios import scenario_motion_preference
         
         output_dir = os.path.join(self.output_dir, "motion_preference")
         
@@ -700,7 +700,7 @@ class TestEnhancedScenarios:
             
     def test_scenario_joint_limits(self):
         """Test joint limit enforcement scenario."""
-        from modern_robotics_sim.enhanced_scenarios import scenario_joint_limits
+        from code.enhanced_scenarios import scenario_joint_limits
         
         output_dir = os.path.join(self.output_dir, "joint_limits")
         
@@ -719,7 +719,7 @@ class TestEnhancedScenarios:
         
     def test_scenario_singularity_avoidance(self):
         """Test singularity avoidance scenario."""
-        from modern_robotics_sim.enhanced_scenarios import scenario_singularity_avoidance
+        from code.enhanced_scenarios import scenario_singularity_avoidance
         
         output_dir = os.path.join(self.output_dir, "singularity_avoidance")
         
@@ -737,7 +737,7 @@ class TestEnhancedScenarios:
         
     def test_scenario_block_throwing(self):
         """Test block throwing scenario - the 'fun' one!"""
-        from modern_robotics_sim.enhanced_scenarios import scenario_block_throwing
+        from code.enhanced_scenarios import scenario_block_throwing
         
         output_dir = os.path.join(self.output_dir, "block_throwing")
         
@@ -772,7 +772,7 @@ class TestEnhancedScenarios:
             
     def test_scenario_obstacle_avoidance(self):
         """Test obstacle avoidance scenario."""
-        from modern_robotics_sim.enhanced_scenarios import scenario_obstacle_avoidance
+        from code.enhanced_scenarios import scenario_obstacle_avoidance
         
         output_dir = os.path.join(self.output_dir, "obstacle_avoidance")
         
@@ -790,7 +790,7 @@ class TestEnhancedScenarios:
         
     def test_scenario_enhanced_dynamics(self):
         """Test enhanced dynamics scenario for CoppeliaSim."""
-        from modern_robotics_sim.enhanced_scenarios import scenario_enhanced_dynamics
+        from code.enhanced_scenarios import scenario_enhanced_dynamics
         
         output_dir = os.path.join(self.output_dir, "enhanced_dynamics")
         
@@ -814,7 +814,7 @@ class TestEnhancedScenarios:
             
     def test_run_all_advanced_scenarios(self):
         """Test running all advanced scenarios together."""
-        from modern_robotics_sim.enhanced_scenarios import run_all_advanced_scenarios
+        from code.enhanced_scenarios import run_all_advanced_scenarios
         
         output_dir = os.path.join(self.output_dir, "all_scenarios")
         
@@ -843,7 +843,7 @@ class TestEnhancedScenarios:
         
     def test_enhanced_scenarios_error_handling(self):
         """Test that enhanced scenarios handle errors gracefully."""
-        from modern_robotics_sim.enhanced_scenarios import (
+        from code.enhanced_scenarios import (
             scenario_stationary_base, scenario_motion_preference
         )
         
@@ -860,7 +860,7 @@ class TestEnhancedScenarios:
         
     def test_enhanced_scenarios_output_consistency(self):
         """Test that enhanced scenarios produce consistent output formats."""
-        from modern_robotics_sim.enhanced_scenarios import (
+        from code.enhanced_scenarios import (
             scenario_stationary_base, scenario_block_throwing
         )
         
@@ -898,7 +898,7 @@ class TestAdvancedFeatures:
     def test_advanced_features_import(self):
         """Test that advanced features can be imported."""
         try:
-            from modern_robotics_sim.advanced_features import (
+            from code.advanced_features import (
                 weighted_pseudoinverse, plan_stationary_base_trajectory,
                 enhanced_feedback_control, plan_throwing_trajectory,
                 obstacle_avoiding_planner, create_coppelia_dynamics_config
@@ -910,7 +910,7 @@ class TestAdvancedFeatures:
             
     def test_weighted_pseudoinverse(self):
         """Test weighted pseudoinverse computation."""
-        from modern_robotics_sim.advanced_features import weighted_pseudoinverse
+        from code.advanced_features import weighted_pseudoinverse
         
         # Create test Jacobian
         J = np.random.rand(6, 9)
@@ -935,7 +935,7 @@ class TestAdvancedFeatures:
         
     def test_coppelia_dynamics_config(self):
         """Test CoppeliaSim dynamics configuration."""
-        from modern_robotics_sim.advanced_features import create_coppelia_dynamics_config
+        from code.advanced_features import create_coppelia_dynamics_config
         
         config = create_coppelia_dynamics_config()
         
@@ -954,7 +954,7 @@ class TestAdvancedFeatures:
         
     def test_throwing_trajectory_planning(self):
         """Test ballistic trajectory planning for block throwing."""
-        from modern_robotics_sim.advanced_features import plan_throwing_trajectory
+        from code.advanced_features import plan_throwing_trajectory
         
         # Test throwing parameters (note: function signature needs initial_config first)
         initial_config = np.zeros(12)  # Robot configuration
@@ -987,8 +987,8 @@ class TestEnhancedIntegration:
     
     def test_enhanced_scenarios_with_base_system(self):
         """Test that enhanced scenarios integrate with base capstone system."""
-        from modern_robotics_sim.enhanced_scenarios import scenario_stationary_base
-        from modern_robotics_sim.run_capstone import (
+        from code.enhanced_scenarios import scenario_stationary_base
+        from code.run_capstone import (
             create_default_cube_poses, create_grasp_transforms
         )
         
@@ -1011,7 +1011,7 @@ class TestEnhancedIntegration:
         
     def test_enhanced_scenarios_documentation_completeness(self):
         """Test that all enhanced scenarios produce complete documentation."""
-        from modern_robotics_sim.enhanced_scenarios import run_all_advanced_scenarios
+        from code.enhanced_scenarios import run_all_advanced_scenarios
         
         output_dir = os.path.join(os.path.dirname(__file__), "..", "milestone4", "documentation_test")
         

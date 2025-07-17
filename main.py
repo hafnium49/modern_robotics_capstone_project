@@ -6,7 +6,14 @@ This script provides a unified interface for the complete capstone project,
 combining all functionality for simulation, analysis, and submission generation.
 
 Usage:
-    python main.py                      # Generate complete submission package
+    python main.py                      # Generate complete submissi    required_files = [
+        "code/__init__.py",
+        "code/driver.py", 
+        "code/next_state.py",
+        "code/trajectory_generator.py",
+        "code/run_capstone.py",
+        "code/scenarios.py",
+        "code/feedback_control.py",ge
     python main.py [scenario]           # Run specific scenario  
     python main.py --help               # Show detailed help
 
@@ -34,14 +41,14 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 # Import milestone components
-from modern_robotics_sim.run_capstone import (
+from code.run_capstone import (
     create_default_cube_poses, create_grasp_transforms, create_initial_ee_pose,
     run_capstone_simulation, plot_error_results
 )
 
 # Import advanced features for "Other Things to Try"
 try:
-    from modern_robotics_sim.enhanced_scenarios import (
+    from code.enhanced_scenarios import (
         scenario_stationary_base, scenario_motion_preference, scenario_joint_limits,
         scenario_singularity_avoidance, scenario_block_throwing, scenario_obstacle_avoidance,
         scenario_enhanced_dynamics, run_all_advanced_scenarios
@@ -320,13 +327,13 @@ def create_code_directory():
     
     # Copy main source files
     source_files = [
-        "modern_robotics_sim/__init__.py",
-        "modern_robotics_sim/driver.py", 
-        "modern_robotics_sim/next_state.py",
-        "modern_robotics_sim/trajectory_generator.py",
-        "modern_robotics_sim/run_capstone.py",
-        "modern_robotics_sim/scenarios.py",
-        "modern_robotics_sim/feedback_control.py",
+        "code/__init__.py",
+        "code/driver.py", 
+        "code/next_state.py",
+        "code/trajectory_generator.py",
+        "code/run_capstone.py",
+        "code/scenarios.py",
+        "code/feedback_control.py",
         "requirements.txt"
     ]
     

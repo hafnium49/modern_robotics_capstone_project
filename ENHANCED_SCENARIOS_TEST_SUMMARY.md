@@ -146,9 +146,9 @@ python -m pytest tests/test_milestone4.py::TestEnhancedScenarios::test_scenario_
 - `tests/test_milestone4.py` - Enhanced with comprehensive scenario testing
 
 ### Implementation Files  
-- `modern_robotics_sim/enhanced_scenarios.py` - All enhanced scenarios
-- `modern_robotics_sim/advanced_features.py` - Supporting advanced features
-- `modern_robotics_sim/run_capstone.py` - Updated matplotlib backend handling
+- `code/enhanced_scenarios.py` - All enhanced scenarios
+- `code/advanced_features.py` - Supporting advanced features
+- `code/run_capstone.py` - Updated matplotlib backend handling
 
 ### Documentation
 - `ENHANCED_SCENARIOS_TEST_SUMMARY.md` - This summary document
