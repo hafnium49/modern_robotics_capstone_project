@@ -89,16 +89,16 @@ pytest -q
 ### Testing Individual Components
 ```bash
 # Test kinematic simulator (Milestone 1)
-pytest tests/test_next_state.py -v
+pytest code/code/tests/test_next_state.py -v
 
 # Test trajectory generator (Milestone 2)  
-pytest tests/test_trajectory_generator.py -v
+pytest code/code/tests/test_trajectory_generator.py -v
 
 # Test feedback control system (Milestone 3)
-pytest tests/test_milestone3.py -v
+pytest code/code/tests/test_milestone3.py -v
 
 # Test complete integration (Milestone 4)
-pytest tests/test_milestone4.py -v
+pytest code/code/tests/test_milestone4.py -v
 ```
 
 ---
@@ -179,13 +179,13 @@ Running `NextState` for 1 s (100 steps, dt = 0.01 s) with the following wheel sp
 | (‑10,  10, ‑10, 10)  |  y ≈ +0.475 m           |
 | (‑10,  10,  10,‑10)  |  φ ≈ +1.234 rad         |
 
-Unit tests in `tests/test_milestone1.py` assert these values (±1 mm / 1 mrad).
+Unit tests in `code/tests/test_milestone1.py` assert these values (±1 mm / 1 mrad).
 
 ### Testing the sample controls
 
 **Option 1: Run automated tests**
 ```bash
-pytest tests/test_milestone1.py -v
+pytest code/code/tests/test_milestone1.py -v
 ```
 
 **Option 2: Generate CSV files for CoppeliaSim Scene 6**
@@ -347,7 +347,7 @@ You have two options for generating and verifying trajectories:
 
 **Option 1: Run automated tests**
 ```bash
-pytest tests/test_milestone2.py -v
+pytest code/code/tests/test_milestone2.py -v
 ```
 
 **Option 2: Generate CSV files manually**
@@ -605,13 +605,13 @@ You have two options for testing feedforward control:
 **Option 1: Run automated tests**
 ```bash
 # Run all Milestone 3 tests including feedforward tests
-python -m pytest tests/test_milestone3.py -v
+python -m pytest code/code/tests/test_milestone3.py -v
 
 # Run only the feedforward control tests
-python -m pytest tests/test_milestone3.py -k "feedforward" -v
+python -m pytest code/code/tests/test_milestone3.py -k "feedforward" -v
 
 # Run visualization tests (requires matplotlib)
-python -m pytest tests/test_milestone3.py -k "visualization" -v
+python -m pytest code/code/tests/test_milestone3.py -k "visualization" -v
 ```
 
 This will automatically:
@@ -808,7 +808,7 @@ The Milestone 3 implementation provides a complete **Feed-Forward + PI Task-Spac
 - **Speed limiting**: 12.3 rad/s per specification with proper pseudo-inverse handling
 - **Constants compliance**: All hardcoded constants match specification exactly
 
-#### Comprehensive Testing: `tests/test_milestone3.py`
+#### Comprehensive Testing: `code/tests/test_milestone3.py`
 **Test suite covering:**
 - API compliance tests and gain matrix behavior verification
 - Integral error accumulation and speed limiting validation
@@ -999,7 +999,7 @@ modern_robotics_capstone_project/
 │   ├── scenarios.py                # Standard control scenarios
 │   ├── enhanced_scenarios.py       # Advanced "Other Things to Try"
 │   └── advanced_features.py        # Advanced feature implementations
-├── tests/                           # Comprehensive test suite (40+ tests)
+├── code/tests/                           # Comprehensive test suite (40+ tests)
 │   ├── test_next_state.py         # Milestone 1 tests
 │   ├── test_trajectory_generator.py # Milestone 2 tests
 │   ├── test_milestone3.py         # Milestone 3 tests + visualization
@@ -1068,13 +1068,13 @@ The implementation includes comprehensive testing:
 pytest -v
 
 # Test specific milestones
-pytest tests/test_milestone1.py -v    # Kinematic simulator
-pytest tests/test_milestone2.py -v    # Trajectory generator
-pytest tests/test_milestone3.py -v    # Control system
-pytest tests/test_milestone4.py -v    # Integration testing
+pytest code/code/tests/test_milestone1.py -v    # Kinematic simulator
+pytest code/code/tests/test_milestone2.py -v    # Trajectory generator
+pytest code/code/tests/test_milestone3.py -v    # Control system
+pytest code/code/tests/test_milestone4.py -v    # Integration testing
 
 # Test enhanced scenarios
-pytest tests/test_milestone4.py -k "enhanced" -v
+pytest code/code/tests/test_milestone4.py -k "enhanced" -v
 ```
 
 **Test Coverage:**
@@ -1157,13 +1157,13 @@ Running `NextState` for 1 s (100 steps, dt = 0.01 s) with the following wheel sp
 | (‑10,  10, ‑10, 10)  |  y ≈ +0.475 m           |
 | (‑10,  10,  10,‑10)  |  φ ≈ +1.234 rad         |
 
-Unit tests in `tests/test_milestone1.py` assert these values (±1 mm / 1 mrad).
+Unit tests in `code/tests/test_milestone1.py` assert these values (±1 mm / 1 mrad).
 
 ### Testing the sample controls
 
 **Option 1: Run automated tests**
 ```bash
-pytest tests/test_milestone1.py -v
+pytest code/code/tests/test_milestone1.py -v
 ```
 
 **Option 2: Generate CSV files for CoppeliaSim Scene 6**
@@ -1325,7 +1325,7 @@ You have two options for generating and verifying trajectories:
 
 **Option 1: Run automated tests**
 ```bash
-pytest tests/test_milestone2.py -v
+pytest code/code/tests/test_milestone2.py -v
 ```
 
 **Option 2: Generate CSV files manually**
@@ -1583,13 +1583,13 @@ You have two options for testing feedforward control:
 **Option 1: Run automated tests**
 ```bash
 # Run all Milestone 3 tests including feedforward tests
-python -m pytest tests/test_milestone3.py -v
+python -m pytest code/code/tests/test_milestone3.py -v
 
 # Run only the feedforward control tests
-python -m pytest tests/test_milestone3.py -k "feedforward" -v
+python -m pytest code/code/tests/test_milestone3.py -k "feedforward" -v
 
 # Run visualization tests (requires matplotlib)
-python -m pytest tests/test_milestone3.py -k "visualization" -v
+python -m pytest code/code/tests/test_milestone3.py -k "visualization" -v
 ```
 
 This will automatically:
@@ -1816,7 +1816,7 @@ modern_robotics_capstone_project/
 │   ├── scenarios.py                # Standard control scenarios
 │   ├── enhanced_scenarios.py       # Advanced "Other Things to Try"
 │   └── advanced_features.py        # Advanced feature implementations
-├── tests/                           # Comprehensive test suite (40+ tests)
+├── code/tests/                           # Comprehensive test suite (40+ tests)
 │   ├── test_next_state.py         # Milestone 1 tests
 │   ├── test_trajectory_generator.py # Milestone 2 tests
 │   ├── test_milestone3.py         # Milestone 3 tests + visualization
@@ -1885,13 +1885,13 @@ The implementation includes comprehensive testing:
 pytest -v
 
 # Test specific milestones
-pytest tests/test_milestone1.py -v    # Kinematic simulator
-pytest tests/test_milestone2.py -v    # Trajectory generator
-pytest tests/test_milestone3.py -v    # Control system
-pytest tests/test_milestone4.py -v    # Integration testing
+pytest code/code/tests/test_milestone1.py -v    # Kinematic simulator
+pytest code/code/tests/test_milestone2.py -v    # Trajectory generator
+pytest code/code/tests/test_milestone3.py -v    # Control system
+pytest code/code/tests/test_milestone4.py -v    # Integration testing
 
 # Test enhanced scenarios
-pytest tests/test_milestone4.py -k "enhanced" -v
+pytest code/code/tests/test_milestone4.py -k "enhanced" -v
 ```
 
 **Test Coverage:**

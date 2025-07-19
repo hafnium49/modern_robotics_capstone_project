@@ -346,10 +346,9 @@ def create_code_directory():
         else:
             print(f"  ⚠️ Missing {src_file}")
     
-    # Copy test files (optional but good to include)
-    if os.path.exists("tests"):
-        shutil.copytree("tests", "code/tests")
-        print(f"  ✓ Copied tests/ directory")
+    # Tests are now already in the code directory
+    if os.path.exists("code/tests"):
+        print(f"  ✓ Tests directory already present in code/")
     
     # Create main.py copy in code directory
     shutil.copy2(__file__, "code/main.py")

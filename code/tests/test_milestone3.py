@@ -13,7 +13,7 @@ except ImportError:
     VISUALIZATION_AVAILABLE = False
     print("Matplotlib not available - visualization features disabled")
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from code.next_state import NextState
 from code.feedback_control import (

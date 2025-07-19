@@ -16,7 +16,7 @@ The complete submission package has been successfully created according to all c
 - **run_milestone4.py** - Command-line interface
 - **usage_examples.py** - Usage demonstration
 - **requirements.txt** - Python dependencies
-- **tests/** - Complete test suite
+- **code/tests/** - Complete test suite
 
 #### 3. Results Directories
 

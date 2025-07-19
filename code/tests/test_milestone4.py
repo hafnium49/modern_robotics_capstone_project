@@ -13,7 +13,8 @@ import shutil
 from pathlib import Path
 import sys
 
-# Add the parent directory to the path to import modules
+# Add the parent directory to the path to import modules  
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from code.run_capstone import (
