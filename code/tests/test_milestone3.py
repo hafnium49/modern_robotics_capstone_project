@@ -816,8 +816,10 @@ def generate_comparison_csvs(output_dir="milestone3_feedforward_tests"):
     Returns:
         Dictionary with results for each test case
     """
-    # Create output directory
-    os.makedirs(output_dir, exist_ok=True)
+    # Create output directory in the project root (not inside code/)
+    project_root = os.path.join(os.path.dirname(__file__), '..', '..')
+    full_output_dir = os.path.join(project_root, output_dir)
+    os.makedirs(full_output_dir, exist_ok=True)
     
     # Test cases
     test_cases = [
@@ -830,12 +832,12 @@ def generate_comparison_csvs(output_dir="milestone3_feedforward_tests"):
     results = {}
     
     for case_name, initial_error, description in test_cases:
-        output_file = os.path.join(output_dir, f"feedforward_{case_name}.csv")
+        output_file = os.path.join(full_output_dir, f"feedforward_{case_name}.csv")
         csv_data = generate_feedforward_csv(output_file, initial_error)
         results[case_name] = csv_data
     
     # Generate analysis report
-    report_file = os.path.join(output_dir, "feedforward_test_report.txt")
+    report_file = os.path.join(full_output_dir, "feedforward_test_report.txt")
     with open(report_file, 'w') as f:
         f.write("Milestone 3 Feedforward Control Test Report\n")
         f.write("=" * 50 + "\n\n")
@@ -1850,9 +1852,12 @@ def test_generate_feedforward_csv_files():
         "feedforward_test_report.txt"
     ]
     
-    # Check that all expected files exist
+    # Check that all expected files exist in project root
+    project_root = os.path.join(os.path.dirname(__file__), '..', '..')
+    full_output_dir = os.path.join(project_root, output_dir)
+    
     for filename in expected_files:
-        filepath = os.path.join(output_dir, filename)
+        filepath = os.path.join(full_output_dir, filename)
         assert os.path.exists(filepath), f"Expected file {filepath} was not created"
         
         # Verify CSV files have content

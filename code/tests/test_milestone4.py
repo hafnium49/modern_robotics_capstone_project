@@ -225,7 +225,7 @@ class TestMilestone4Simulation:
     
     def setup_method(self):
         """Set up milestone4 output directory for each test."""
-        self.output_dir = os.path.join(os.path.dirname(__file__), "..", "milestone4")
+        self.output_dir = os.path.join(os.path.dirname(__file__), "..", "..", "milestone4")
         os.makedirs(self.output_dir, exist_ok=True)
         
     def teardown_method(self):
@@ -625,7 +625,7 @@ class TestEnhancedScenarios:
     
     def setup_method(self):
         """Set up test environment for enhanced scenarios."""
-        self.output_dir = os.path.join(os.path.dirname(__file__), "..", "milestone4", "enhanced_scenarios")
+        self.output_dir = os.path.join(os.path.dirname(__file__), "..", "..", "milestone4", "enhanced_scenarios")
         os.makedirs(self.output_dir, exist_ok=True)
         
     def test_enhanced_scenarios_import(self):

@@ -174,8 +174,8 @@ def test_dwell_length():
 
 def save_trajectory_to_csv(trajectory, filename):
     """Save trajectory to CSV file with appropriate headers."""
-    # Create the milestone2 directory if it doesn't exist
-    output_dir = os.path.join(os.path.dirname(__file__), '..', 'milestone2')
+    # Create the milestone2 directory in the parent directory (not inside code/)
+    output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'milestone2')
     os.makedirs(output_dir, exist_ok=True)
     
     # Define column headers
