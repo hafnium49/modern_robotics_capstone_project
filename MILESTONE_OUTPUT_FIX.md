@@ -45,19 +45,19 @@ project_root/
 ### **Test Commands:**
 ```bash
 # Generate milestone1 outputs
-python test.py code/tests/test_milestone1.py::test_generate_milestone1_outputs
+python code/test.py tests/test_milestone1.py::test_generate_milestone1_outputs
 
 # Generate milestone2 outputs  
-python test.py code/tests/test_milestone2.py::test_basic_properties
+python code/test.py tests/test_milestone2.py::test_basic_properties
 
 # Generate milestone3 outputs
-python test.py code/tests/test_milestone3.py::test_generate_feedforward_csv_files
+python code/test.py tests/test_milestone3.py::test_generate_feedforward_csv_files
 
 # Generate milestone4 outputs
-python test.py code/tests/test_milestone4.py::TestMilestone4Simulation::test_output_file_generation
+python code/test.py tests/test_milestone4.py::TestMilestone4Simulation::test_output_file_generation
 
 # Test all together
-python test.py code/tests/test_milestone1.py::test_generate_milestone1_outputs code/tests/test_milestone2.py::test_basic_properties code/tests/test_milestone3.py::test_generate_feedforward_csv_files code/tests/test_milestone4.py::TestMilestone4Simulation::test_output_file_generation
+python code/test.py tests/test_milestone1.py::test_generate_milestone1_outputs tests/test_milestone2.py::test_basic_properties tests/test_milestone3.py::test_generate_feedforward_csv_files tests/test_milestone4.py::TestMilestone4Simulation::test_output_file_generation
 ```
 
 ## ✅ **Verification Results:**

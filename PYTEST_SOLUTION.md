@@ -23,11 +23,11 @@ The original error occurred because:
        -p no:debugging    # ← Disables debugging plugin
    ```
 
-2. **`test.py`** - Simple wrapper script:
+2. **`code/test.py`** - Simple wrapper script:
    ```bash
-   python test.py code/tests/test_milestone4.py::TestMilestone4Setup::test_default_cube_poses
-   python test.py code/tests/test_milestone1.py
-   python test.py  # Run all tests
+   python code/test.py tests/test_milestone4.py::TestMilestone4Setup::test_default_cube_poses
+   python code/test.py tests/test_milestone1.py
+   python code/test.py  # Run all tests
    ```
 
 3. **`run_tests.py`** - Updated with pytest options
@@ -38,9 +38,9 @@ The original error occurred because:
 
 #### Option 1: Simple wrapper (recommended)
 ```bash
-python test.py                                    # Run all tests
-python test.py code/tests/test_milestone4.py     # Run specific file
-python test.py code/tests/test_milestone1.py::test_forward_x  # Run specific test
+python code/test.py                                    # Run all tests
+python code/test.py tests/test_milestone4.py          # Run specific file
+python code/test.py tests/test_milestone1.py::test_forward_x  # Run specific test
 ```
 
 #### Option 2: Direct pytest (with options)

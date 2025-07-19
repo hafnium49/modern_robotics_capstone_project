@@ -5,10 +5,10 @@ Comprehensive Test Runner for Modern Robotics Capstone Project
 This script provides multiple ways to run tests without pytest conflicts.
 
 Usage examples:
-  python test.py                                    # Run all tests with pytest
-  python test.py --individual                       # Run tests individually without pytest
-  python test.py code/tests/test_milestone1.py      # Run specific test file
-  python test.py code/tests/test_milestone4.py::TestMilestone4Setup::test_default_cube_poses
+  python code/test.py                                      # Run all tests with pytest
+  python code/test.py --individual                         # Run tests individually without pytest
+  python code/test.py tests/test_milestone1.py             # Run specific test file
+  python code/test.py tests/test_milestone4.py::TestMilestone4Setup::test_default_cube_poses
 """
 
 import sys
@@ -23,9 +23,12 @@ def run_tests_with_pytest(test_args=None):
     
     # Run pytest from project root to avoid 'code' module conflicts
     try:
+        # Get project root (parent directory of code)
+        project_root = Path(__file__).parent.parent.absolute()
+        
         # Set PYTHONPATH to ensure proper imports
         env = os.environ.copy()
-        env['PYTHONPATH'] = str(Path.cwd().absolute())
+        env['PYTHONPATH'] = str(project_root)
         
         # Base pytest command with conflict-avoiding options
         cmd = [
@@ -39,11 +42,20 @@ def run_tests_with_pytest(test_args=None):
         
         # Add specific test arguments or default to all tests
         if test_args:
-            cmd.extend(test_args)
+            # Convert relative paths to work from project root
+            converted_args = []
+            for arg in test_args:
+                if arg.startswith('tests/') or arg.startswith('tests\\'):
+                    # Convert tests/ to code/tests/
+                    converted_args.append(arg.replace('tests/', 'code/tests/').replace('tests\\', 'code\\tests\\'))
+                else:
+                    converted_args.append(arg)
+            cmd.extend(converted_args)
         else:
             cmd.append('code/tests/')
         
-        result = subprocess.run(cmd, env=env, capture_output=False)
+        # Run from project root
+        result = subprocess.run(cmd, env=env, capture_output=False, cwd=str(project_root))
         return result.returncode == 0
     except Exception as e:
         print(f"Error running pytest: {e}")
@@ -58,8 +70,7 @@ def run_individual_test_modules():
     original_path = sys.path[:]
     
     try:
-        # Change to code directory and add to path
-        os.chdir('code')
+        # We're already in code directory, just add to path
         sys.path.insert(0, '.')
         
         test_modules = [
