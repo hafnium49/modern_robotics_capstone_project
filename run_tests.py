@@ -12,18 +12,23 @@ import subprocess
 from pathlib import Path
 
 def run_tests_with_pytest():
-    """Run tests using pytest from the code directory."""
+    """Run tests using pytest with proper module isolation."""
     print("Running tests with pytest...")
     
-    # Change to code directory
-    os.chdir('code')
-    
-    # Run pytest
+    # Run pytest from project root to avoid 'code' module conflicts
     try:
+        # Set PYTHONPATH to ensure proper imports
+        env = os.environ.copy()
+        env['PYTHONPATH'] = str(Path.cwd().absolute())
+        
         result = subprocess.run([
             sys.executable, '-m', 'pytest', 
-            'tests/', '-v'
-        ], capture_output=False)
+            'code/tests/', '-v',
+            '--tb=short',  # Shorter traceback to avoid pdb issues
+            '-p', 'no:pdb',  # Disable pdb plugin
+            '-p', 'no:debugging',  # Disable debugging plugin
+            '--disable-warnings'  # Disable warnings for cleaner output
+        ], env=env, capture_output=False)
         return result.returncode == 0
     except Exception as e:
         print(f"Error running pytest: {e}")
