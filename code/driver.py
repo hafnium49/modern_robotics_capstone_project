@@ -1,7 +1,11 @@
 import argparse
 import csv
 import numpy as np
-from .next_state import NextState
+
+try:
+    from .next_state import NextState
+except ImportError:
+    from next_state import NextState
 
 
 def parse_args():

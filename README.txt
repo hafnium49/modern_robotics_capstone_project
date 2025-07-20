@@ -107,6 +107,30 @@ Run specific test suites:
   python code/test.py tests/test_milestone3.py    # Control system
   python code/test.py tests/test_milestone4.py    # Integration testing
 
+MILESTONE 1 TESTING OPTIONS
+--------------------------
+For testing the NextState kinematic simulator, two approaches are available:
+
+Option 1 - Automated testing (Recommended):
+  python code/test.py tests/test_milestone1.py::test_generate_milestone1_outputs
+
+  This generates multiple CSV files in the milestone1/ directory:
+  - test_case1_scene6.csv - Forward motion (Scene 6 format)
+  - test_case2_scene6.csv - Sideways motion (Scene 6 format)  
+  - test_case3_scene6.csv - Rotation motion (Scene 6 format)
+  - Additional test cases with debugging headers
+
+Option 2 - Manual CSV generation with driver.py:
+  python -m code.driver milestone1/initial_config.csv output.csv \
+    --controls 10 10 10 10 0 0 0 0 0 --steps 100
+
+  Examples:
+  # Forward motion: python -m code.driver milestone1/initial_config.csv forward.csv --controls 10 10 10 10 0 0 0 0 0
+  # Sideways: python -m code.driver milestone1/initial_config.csv sideways.csv --controls -10 10 -10 10 0 0 0 0 0
+  # Rotation: python -m code.driver milestone1/initial_config.csv rotate.csv --controls -10 10 10 -10 0 0 0 0 0
+
+All generated CSV files can be loaded into CoppeliaSim Scene 6 for visual verification.
+
 COPPELISIM ANIMATION
 ------------------
 To animate the results in CoppeliaSim:
