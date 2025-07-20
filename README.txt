@@ -93,6 +93,20 @@ Run individual scenarios:
 Run all scenarios:
   python code/main.py all
 
+TESTING
+-------
+Run all tests to verify installation:
+  python code/test.py
+
+Run tests individually (without pytest):
+  python code/test.py --individual
+
+Run specific test suites:
+  python code/test.py tests/test_milestone1.py    # Kinematic simulator
+  python code/test.py tests/test_milestone2.py    # Trajectory generator  
+  python code/test.py tests/test_milestone3.py    # Control system
+  python code/test.py tests/test_milestone4.py    # Integration testing
+
 COPPELISIM ANIMATION
 ------------------
 To animate the results in CoppeliaSim:

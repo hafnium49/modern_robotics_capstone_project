@@ -84,6 +84,9 @@ python code/main.py advanced_all        # All advanced features
 
 # Run all tests to verify installation
 python code/test.py
+
+# Alternative: run tests individually without pytest
+python code/test.py --individual
 ```
 
 ### Testing Individual Components
@@ -99,6 +102,9 @@ python code/test.py tests/test_milestone3.py -v
 
 # Test complete integration (Milestone 4)
 python code/test.py tests/test_milestone4.py -v
+
+# Test specific function
+python code/test.py tests/test_milestone4.py::TestMilestone4Setup::test_default_cube_poses
 ```
 
 ---
