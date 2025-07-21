@@ -48,13 +48,21 @@ INV_TB0 = np.linalg.inv(TB0)
 INTEGRAL_BOUNDS = np.array([0.5, 0.5, 0.5, 0.1, 0.1, 0.1])
 
 # Joint limits for youBot arm (in radians)
-JOINT_LIMITS_MIN = np.array([-2.95, -1.57, -2.635, -1.78, -2.92])
-JOINT_LIMITS_MAX = np.array([2.95, 1.57, 2.635, 1.78, 2.92])
+# Based on youbot-ros-pkg repository CKinematics.cpp isReachable() function:
+# Joint 1: 0.015 to 5.84 radians
+# Joint 2: 0.015 to 2.61 radians  
+# Joint 3: -5.02 to -0.016 radians
+# Joint 4: 0.025 to 3.42 radians
+# Joint 5: No explicit limits found, using conservative estimate
+JOINT_LIMITS_MIN = np.array([0.015, 0.015, -5.02, 0.025, -2.92])
+JOINT_LIMITS_MAX = np.array([5.84, 2.61, -0.016, 3.42, 2.92])
 
 # Conservative joint limits to avoid singularities and self-collisions
 # As suggested in the document, constrain joints 3 and 4 to be less than -0.2 rad
-JOINT_LIMITS_CONSERVATIVE_MIN = np.array([-2.95, -1.57, -2.635, -1.78, -2.92])
-JOINT_LIMITS_CONSERVATIVE_MAX = np.array([2.95, 1.57, -0.2, -0.2, 2.92])
+# Joint 3 already has upper limit of -0.016, so we make it more conservative at -0.2
+# Joint 4 minimum raised to avoid singularities near zero
+JOINT_LIMITS_CONSERVATIVE_MIN = np.array([0.015, 0.015, -5.02, 0.2, -2.92])
+JOINT_LIMITS_CONSERVATIVE_MAX = np.array([5.84, 2.61, -0.2, 3.42, 2.92])
 
 
 def testJointLimits(theta, use_conservative_limits=False):
