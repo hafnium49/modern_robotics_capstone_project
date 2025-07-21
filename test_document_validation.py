@@ -87,20 +87,20 @@ def test_document_specific_case():
     expected_V_d = np.array([0, 0, 0, 20, 0, 10])
     expected_Ad_V_d = np.array([0, 0, 21.409, 0, 6.455, 0])
     expected_V = np.array([0, 0, 0, 21.409, 0, 6.455])
-    expected_X_err = np.array([0.171, 0.08, 0, 0, 0, 0.107])
+    expected_X_err = np.array([0, 0.171, 0, 0.080, 0, 0.107])
     expected_X_err_dt = expected_X_err * dt
     
-    # Expected Jacobian (from document)
+    # Expected Jacobian (from document) - 6x9 matrix
     expected_J_b = np.array([
-        [-0.030, -0.030, -0.030, -0.030, -0.985, 0],
-        [0.003, 0.003, 0.003, 0.003, 0, -1],
-        [0.005, 0.005, 0.005, 0.005, 1, 0],
-        [0, 0, 0, 0, 0.240, -0.218],
-        [0.012, 0.012, 0.012, 0.012, 0.285, 0.135],
-        [0, 0, 0, 0, 0, -1]
+        [0.030, -0.030, -0.030, 0.030, -0.985, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, -1, -1, -1, 0],
+        [-0.005, 0.005, 0.005, -0.005, 0.170, 0, 0, 0, 1],
+        [0.002, 0.002, 0.002, 0.002, 0, -0.240, -0.214, -0.218, 0],
+        [-0.024, 0.024, 0, 0, 0.221, 0, 0, 0, 0],
+        [0.012, 0.012, 0.012, 0.012, 0, -0.288, -0.135, 0, 0]
     ])
     
-    expected_controls = np.array([157.2, 157.2, 157.2, -0.529, 139.86, -7.45, 0])
+    expected_controls = np.array([157.2, 157.2, 157.2, 157.2, 0, -652.9, 139.86, -745.7, 0])
     
     print("\n" + "-"*70)
     print("EXPECTED VALUES FROM DOCUMENT:")
@@ -125,9 +125,8 @@ def test_document_specific_case():
     # Compute our Jacobian for comparison
     J_computed = compute_jacobian(robot_config)
     print(f"\nOur computed Jacobian J_e shape: {J_computed.shape}")
-    if J_computed.shape[1] >= 6:
-        print("Our Jacobian J_e (first 6 columns):")
-        print(J_computed[:, :6])
+    print("Our computed Jacobian J_e (full 6x9 matrix):")
+    print(J_computed)
     
     print("\n" + "-"*70)
     print("COMPARISON AND ANALYSIS:")
@@ -146,7 +145,7 @@ def test_document_specific_case():
     print(f"X_err error magnitude: {x_err_error:.3f}")
     
     # Check controls (allow larger tolerance as these are more sensitive)
-    controls_error = np.linalg.norm(controls[:7] - expected_controls)
+    controls_error = np.linalg.norm(controls - expected_controls)
     print(f"Controls error magnitude: {controls_error:.3f}")
     
     # Individual component analysis
