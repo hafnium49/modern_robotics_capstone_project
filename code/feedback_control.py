@@ -74,23 +74,20 @@ def get_F6():
     """Compute the 6x4 F6 matrix mapping wheel rates to chassis twist.
     
     Wheel numbering convention: front-left=1, front-right=2, rear-left=3, rear-right=4
-    Counter-clockwise from front-left as shown in youBot wiki.
+    This corresponds to the textbook's u2, u1, u3, u4.
     
     Returns:
         6x4 F6 matrix
     """
-    # 4x3 matrix H0 that converts chassis twist Vb to wheel speeds
-    # H0 maps [ωz, vx, vy] to [u1, u2, u3, u4]
-    # Wheel order: front-left, front-right, rear-left, rear-right
-    H0 = (1/R) * np.array([
-        [-1/(L+W),  1,  1/(L+W)],  # wheel 1 (front-left)
-        [ 1/(L+W),  1, -1/(L+W)],  # wheel 2 (front-right)  
-        [ 1/(L+W),  1,  1/(L+W)],  # wheel 3 (rear-left)
-        [-1/(L+W),  1, -1/(L+W)]   # wheel 4 (rear-right)
+    # F maps [u_fl, u_fr, u_rl, u_rr] to [ωz, vx, vy]
+    # This is the textbook F matrix with the first two columns swapped
+    # to match our wheel order convention (fl, fr, rl, rr).
+    lw = L + W
+    F = (R / 4.0) * np.array([
+        [-1 / lw, 1 / lw, 1 / lw, -1 / lw],
+        [1, 1, 1, 1],
+        [-1, 1, -1, 1]
     ])
-    
-    # Pseudo-inverse to get F (4x3) mapping wheel speeds to [ωz, vx, vy]
-    F = np.linalg.pinv(H0)
     
     # Embed in 6D: map wheel speeds to [ωx, ωy, ωz, vx, vy, vz]
     F6 = np.zeros((6, 4))

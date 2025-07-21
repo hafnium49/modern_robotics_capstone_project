@@ -2,7 +2,7 @@
 Test to verify the specific Milestone 3 document requirements.
 
 This test validates the exact test case given in the Milestone 3 document:
-- robot configuration (φ, x, y, θ₁, θ₂, θ₃, θ₄, θ₅) = (0, 0, 0, 0, 0, -0.2, 1.6, 0)
+- robot configuration (φ, x, y, θ₁, θ₂, θ₃, θ₄, θ₅) = (0, 0, 0, 0, 0, 0.2, -1.6, 0)
 - Specific expected values for V_d, V, X_err, controls, etc.
 """
 import numpy as np
@@ -25,9 +25,9 @@ def test_document_specific_case():
     print("TESTING MILESTONE 3 DOCUMENT SPECIFIC TEST CASE")
     print("="*70)
     
-    # Robot configuration from document: (φ, x, y, θ₁, θ₂, θ₃, θ₄, θ₅) = (0, 0, 0, 0, 0, -0.2, 1.6, 0)
+    # Robot configuration from document: (φ, x, y, θ₁, θ₂, θ₃, θ₄, θ₅) = (0, 0, 0, 0, 0, 0.2, -1.6, 0)
     robot_config = np.array([0.0, 0.0, 0.0,     # chassis: phi, x, y
-                             0.0, 0.0, -0.2, 1.6, 0.0,  # arm joints: θ₁, θ₂, θ₃, θ₄, θ₅
+                             0.0, 0.0, 0.2, -1.6, 0.0,  # arm joints: θ₁, θ₂, θ₃, θ₄, θ₅
                              0.0, 0.0, 0.0, 0.0])       # wheels (not used in this test)
     
     print(f"Robot configuration: φ={robot_config[0]:.1f}, x={robot_config[1]:.1f}, y={robot_config[2]:.1f}")
@@ -35,16 +35,16 @@ def test_document_specific_case():
     
     # End-effector configurations from document
     X_e = np.array([
-        [1, 0, 0, 1],
-        [0, 1, 0, 0],
         [0, 0, 1, 0.5],
+        [0, 1, 0, 0],
+        [-1, 0, 0, 0.5],
         [0, 0, 0, 1]
     ])
     
     X_e_next = np.array([
-        [0, 0, -1, 0],
-        [1, 0, 0, 1],
-        [0, -1, 0, 0.5],
+        [0, 0, 1, 0.6],
+        [0, 1, 0, 0],
+        [-1, 0, 0, 0.3],
         [0, 0, 0, 1]
     ])
     
@@ -84,20 +84,20 @@ def test_document_specific_case():
     )
     
     # Expected values from document
-    expected_V_d = np.array([0, 0, 0, 0, 0, 10])
-    expected_Ad_V_d = np.array([-0.297, -1.011, 9.268, 0, 4.645, 0])  # Added 6th component 
-    expected_V = np.array([0, -0.241, 0, 9.645, 0, 0])  # Added 6th component
-    expected_X_err = np.array([0.71, 0.01, 0.08, 0, 0, 0.01])
-    expected_X_err_dt = np.array([0.0071, 0.0001, 0.0008, 0, 0, 0.0001])
+    expected_V_d = np.array([0, 0, 0, 20, 0, 10])
+    expected_Ad_V_d = np.array([0, 0, 21.409, 0, 6.455, 0])
+    expected_V = np.array([0, 0, 0, 21.409, 0, 6.455])
+    expected_X_err = np.array([0.171, 0.08, 0, 0, 0, 0.107])
+    expected_X_err_dt = expected_X_err * dt
     
     # Expected Jacobian (from document)
     expected_J_b = np.array([
-        [-0.030, -0.030, -0.030, 0.003, 0.985, 0],
-        [-0.003, -0.003, -0.003, 0.000, 0, 1],
-        [0.005, 0.005, 0.005, -0.005, -1, -1],
-        [0.000, 0.000, 0.000, -0.240, -0.214, -0.218],
-        [0.012, 0.012, 0.012, 0.012, -0.285, -0.135],
-        [0, 0, 0, 0, 0, 1]
+        [-0.030, -0.030, -0.030, -0.030, -0.985, 0],
+        [0.003, 0.003, 0.003, 0.003, 0, -1],
+        [0.005, 0.005, 0.005, 0.005, 1, 0],
+        [0, 0, 0, 0, 0.240, -0.218],
+        [0.012, 0.012, 0.012, 0.012, 0.285, 0.135],
+        [0, 0, 0, 0, 0, -1]
     ])
     
     expected_controls = np.array([157.2, 157.2, 157.2, -0.529, 139.86, -7.45, 0])
@@ -138,7 +138,7 @@ def test_document_specific_case():
     small_tol = 0.01  # tighter tolerance for small values
     
     # Check V_cmd against expected V
-    v_error = np.linalg.norm(V_cmd[:5] - expected_V[:5])  # Compare first 5 components
+    v_error = np.linalg.norm(V_cmd - expected_V)
     print(f"V_cmd error magnitude: {v_error:.3f}")
     
     # Check X_err 
@@ -225,20 +225,20 @@ def test_document_case_with_kp_identity():
     
     # Same configuration as before
     robot_config = np.array([0.0, 0.0, 0.0,     # chassis
-                             0.0, 0.0, -0.2, 1.6, 0.0,  # arm joints
+                             0.0, 0.0, 0.2, -1.6, 0.0,  # arm joints
                              0.0, 0.0, 0.0, 0.0])       # wheels
     
     X_e = np.array([
-        [1, 0, 0, 1],
-        [0, 1, 0, 0],
         [0, 0, 1, 0.5],
+        [0, 1, 0, 0],
+        [-1, 0, 0, 0.5],
         [0, 0, 0, 1]
     ])
     
     X_e_next = np.array([
-        [0, 0, -1, 0],
-        [1, 0, 0, 1],
-        [0, -1, 0, 0.5],
+        [0, 0, 1, 0.6],
+        [0, 1, 0, 0],
+        [-1, 0, 0, 0.3],
         [0, 0, 0, 1]
     ])
     
@@ -263,7 +263,7 @@ def test_document_case_with_kp_identity():
     )
     
     # Expected values from document with Kp = Identity
-    expected_V = np.array([0.011, 0.218, 0.486, 0.562, 0, 0])  # Added components as needed
+    expected_V = np.array([0.171, 0.08, 0, 21.409, 0, 6.562])
     expected_controls = np.array([157.5, 157.5, 157.5, -0.543, 1.049, -7.468, 0])
     
     print(f"\nExpected V with Kp=I:     {expected_V}")
@@ -272,7 +272,7 @@ def test_document_case_with_kp_identity():
     print(f"Computed controls:        {controls}")
     
     # Compare results
-    v_error = np.linalg.norm(V_cmd[:4] - expected_V[:4])
+    v_error = np.linalg.norm(V_cmd - expected_V)
     controls_error = np.linalg.norm(controls[:7] - expected_controls)
     
     print(f"\nV error magnitude: {v_error:.3f}")
