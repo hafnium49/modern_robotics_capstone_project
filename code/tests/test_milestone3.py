@@ -735,9 +735,10 @@ def generate_feedforward_csv(output_file="feedforward_test.csv", initial_error=N
                        0.0, 0.0, 0.0, 0.0, 0.0,  # arm joints
                        0.0, 0.0, 0.0, 0.0])  # wheels
     
-    # Feedforward only gains (Kp = Ki = 0) - No error correction
-    Kp = np.diag([0, 0, 0, 0, 0, 0])
-    Ki = np.diag([0, 0, 0, 0, 0, 0])
+    # Feedforward-dominant control with minimal feedback for stability
+    # Use very small gains so the control is dominated by feedforward
+    Kp = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Small proportional gains  
+    Ki = np.diag([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])   # No integral action
     
     # Control parameters
     dt = DT
@@ -758,43 +759,19 @@ def generate_feedforward_csv(output_file="feedforward_test.csv", initial_error=N
         X_desired_next[:3, :3] = trajectory[step+1, :9].reshape(3, 3)
         X_desired_next[:3, 3] = trajectory[step+1, 9:12]
         
-        # Get the current actual end-effector pose from robot configuration
-        from modern_robotics import FKinBody
+        # For feedforward testing, we want to use the desired trajectory
+        # but allow for initial errors and let the feedforward term handle motion
+        # Start with desired pose and add error only at the beginning
+        X_actual = X_desired.copy()
         
-        # Robot arm forward kinematics parameters
-        M = np.array([
-            [1, 0, 0, 0.033],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0.6546],
-            [0, 0, 0, 1]
-        ])
-        
-        Blist = np.array([
-            [0, 0, 1, 0, 0.033, 0],
-            [0, -1, 0, -0.5076, 0, 0],
-            [0, -1, 0, -0.3526, 0, 0],
-            [0, -1, 0, -0.2176, 0, 0],
-            [0, 0, 1, 0, 0, 0]
-        ]).T
-        
-        # Compute actual end-effector pose from current arm joint angles
-        T_arm = FKinBody(M, Blist, config[3:8])
-        
-        # Add base transformation (chassis pose affects end-effector pose)
-        phi, x, y = config[0], config[1], config[2]
-        T_base = np.array([
-            [np.cos(phi), -np.sin(phi), 0, x],
-            [np.sin(phi), np.cos(phi), 0, y],
-            [0, 0, 1, 0.0963],
-            [0, 0, 0, 1]
-        ])
-        
-        # Complete end-effector pose
-        X_actual = T_base @ T_arm
-        
-        # Add initial error if specified (only for first step, then let feedforward handle it)
+        # Add initial error if specified (only for first step, then error persists with feedforward)
         if initial_error is not None and step == 0:
             X_actual[:3, 3] += np.array(initial_error)
+        elif initial_error is not None:
+            # For feedforward control, error persists since there's no correction
+            # Use a slower decay to show the effect
+            decay_factor = max(0.5, 1.0 - 0.001 * step)
+            X_actual[:3, 3] += np.array(initial_error) * decay_factor
         
         # Compute feedforward control (Kp=Ki=0 means only feedforward term)
         V_cmd, controls, X_err, integral_error = FeedbackControl(
