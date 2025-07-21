@@ -9,8 +9,8 @@ Test Files Generated:
 
 Testing Instructions:
 1. Load each CSV file in CoppeliaSim Scene 8
-2. Set cube initial position to (1, 0, 0.025) with 0° rotation
-3. Set cube goal position to (0, -1, 0.025) with -90° rotation
+2. Set cube initial position to (1, 0, 0.025) with 0Â° rotation
+3. Set cube goal position to (0, -1, 0.025) with -90Â° rotation
 4. Run simulation and observe robot behavior
 
 Expected Results:
