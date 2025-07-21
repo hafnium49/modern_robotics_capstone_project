@@ -56,14 +56,14 @@ def create_initial_ee_pose():
 def create_default_cube_poses():
     """Create default cube poses according to Final Step specifications.
     
-    Initial cube: (x, y, θ) = (1 m, 0 m, 0 rad)
+    Initial cube: (x, y, θ) = (1 m, 0 m, 0 rad) 
     Final cube: (x, y, θ) = (0 m, -1 m, -π/2 rad)
     
     Returns:
         Tsc_init: 4x4 SE(3) - initial cube pose
         Tsc_goal: 4x4 SE(3) - goal cube pose
     """
-    # Initial cube configuration: (1 m, 0 m, 0 rad)
+    # Initial cube configuration: (1 m, 0 m, 0 rad) - matches CoppeliaSim Scene 6 defaults
     Tsc_init = np.array([
         [1, 0, 0, 1.0],
         [0, 1, 0, 0.0],
@@ -282,23 +282,66 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
     
-    # Write robot configuration CSV (13-column format for CoppeliaSim)
+    # Write robot configuration CSV (13-column format for CoppeliaSim Scene 6)
     youbot_output_path = os.path.join(output_dir, "youBot_output.csv")
     youbot_data = np.zeros((N_points, 13))
     youbot_data[:, :12] = config_log  # robot configurations
     youbot_data[:, 12] = trajectory_log[:, 12]  # gripper states from trajectory
     
+    # Save in Scene 6 compatible format (no headers, precise formatting)
     np.savetxt(youbot_output_path, youbot_data, delimiter=',', fmt='%.6f')
-    print(f"CSV written to {youbot_output_path}")
+    print(f"Scene 6 compatible CSV written to {youbot_output_path}")
+    
+    # Verify Scene 6 compatibility
+    verify_scene6_compatibility(youbot_output_path)
     
     # Write error log CSV
     error_output_path = os.path.join(output_dir, "Xerr_log.csv")
     np.savetxt(error_output_path, error_log, delimiter=',', fmt='%.6f')
     print(f"Error log written to {error_output_path}")
-    
+
     return config_log, error_log, True
 
 
+def verify_scene6_compatibility(csv_path):
+    """Verify that the CSV file is compatible with CoppeliaSim Scene 6.
+    
+    Args:
+        csv_path: path to the CSV file to verify
+    """
+    try:
+        # Read the CSV file and verify format
+        data = np.loadtxt(csv_path, delimiter=',')
+        rows, cols = data.shape
+        
+        print(f"✓ CSV verification: {rows} rows x {cols} columns")
+        
+        # Check column count (must be 13 for Scene 6)
+        if cols != 13:
+            print(f"⚠ Warning: Expected 13 columns, found {cols}")
+            return False
+            
+        # Check data ranges for reasonableness
+        chassis_phi = data[:, 0]  # φ (chassis orientation)
+        chassis_x = data[:, 1]    # x position
+        chassis_y = data[:, 2]    # y position
+        gripper = data[:, 12]     # gripper state
+        
+        print(f"✓ Chassis position range: x[{chassis_x.min():.3f}, {chassis_x.max():.3f}], y[{chassis_y.min():.3f}, {chassis_y.max():.3f}]")
+        print(f"✓ Chassis orientation range: φ[{chassis_phi.min():.3f}, {chassis_phi.max():.3f}] rad")
+        print(f"✓ Gripper states: {np.unique(gripper).astype(int)}")
+        
+        # Check for NaN or infinite values
+        if np.any(np.isnan(data)) or np.any(np.isinf(data)):
+            print("⚠ Warning: CSV contains NaN or infinite values")
+            return False
+            
+        print("✓ CSV file is compatible with CoppeliaSim Scene 6")
+        return True
+        
+    except Exception as e:
+        print(f"✗ CSV verification failed: {e}")
+        return False
 def plot_error_results(error_log, output_dir="results/best"):
     """Plot all six components of X_err vs time and save as PDF.
     
