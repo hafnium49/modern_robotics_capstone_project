@@ -19,9 +19,10 @@ from code.next_state import NextState
 from code.feedback_control import (
     FeedbackControl, FeedbackController, chassis_to_se3, get_F6, compute_jacobian,
     R, L, W, DT, SPEED_LIMIT, PINV_TOLERANCE, TB0, M0E, BLIST,
-    testJointLimits, enforceJointLimits, modifyJacobianForLimits, 
+    testJointLimits, enforceJointLimits, modifyJacobianForLimits,
     FeedbackControlWithJointLimits, JOINT_LIMITS_MIN, JOINT_LIMITS_MAX
 )
+from code.run_capstone import compute_current_ee_pose
 from code.trajectory_generator import TrajectoryGenerator
 
 
@@ -759,17 +760,14 @@ def generate_feedforward_csv(output_file="feedforward_test.csv", initial_error=N
         X_desired_next[:3, :3] = trajectory[step+1, :9].reshape(3, 3)
         X_desired_next[:3, 3] = trajectory[step+1, 9:12]
         
-        # For feedforward testing, we want to use the desired trajectory
-        # but allow for initial errors and let the feedforward term handle motion
-        # Start with desired pose and add error only at the beginning
-        X_actual = X_desired.copy()
-        
-        # Add initial error if specified (only for first step, then error persists with feedforward)
+        # Compute the actual end-effector pose from the current configuration
+        X_actual = compute_current_ee_pose(config)
+
+        # Add optional initial error (applied to the pose, not the configuration)
         if initial_error is not None and step == 0:
             X_actual[:3, 3] += np.array(initial_error)
         elif initial_error is not None:
-            # For feedforward control, error persists since there's no correction
-            # Use a slower decay to show the effect
+            # Without feedback the error persists; apply slight decay for realism
             decay_factor = max(0.5, 1.0 - 0.001 * step)
             X_actual[:3, 3] += np.array(initial_error) * decay_factor
         
