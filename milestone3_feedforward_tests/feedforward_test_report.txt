@@ -7,10 +7,20 @@ Test Files Generated:
 - feedforward_medium_error.csv: Medium initial error (10cm, 5cm, 2cm)
 - feedforward_large_error.csv: Large initial error (20cm, 10cm, 5cm)
 
-Instructions:
-1. Load any of the CSV files in CoppeliaSim Scene 6
-2. Run the simulation to observe feedforward control behavior
-3. Compare performance between different initial error conditions
-4. Note: Feedforward control shows how trajectory following works
-   without error correction, demonstrating the importance of accurate
-   initial conditions and feedforward terms.
+Testing Instructions:
+1. Load each CSV file in CoppeliaSim Scene 8
+2. Set cube initial position to (1, 0, 0.025) with 0° rotation
+3. Set cube goal position to (0, -1, 0.025) with -90° rotation
+4. Run simulation and observe robot behavior
+
+Expected Results:
+- perfect_initial: Should follow trajectory closely, pick and place cube
+- small_error: Small deviation but should still complete task
+- medium_error: Larger deviation, may not grasp cube perfectly
+- large_error: Significant deviation, likely to miss cube
+
+Key Observations:
+- Feedforward control cannot correct for initial errors
+- Errors persist throughout the trajectory
+- Larger initial errors lead to larger trajectory deviations
+- This demonstrates the need for feedback control in Milestone 3
