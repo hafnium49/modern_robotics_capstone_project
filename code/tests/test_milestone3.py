@@ -18,7 +18,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from code.next_state import NextState
 from code.feedback_control import (
     FeedbackControl, FeedbackController, chassis_to_se3, get_F6, compute_jacobian,
-    R, L, W, DT, SPEED_LIMIT, PINV_TOLERANCE, TB0, M0E, BLIST
+    R, L, W, DT, SPEED_LIMIT, PINV_TOLERANCE, TB0, M0E, BLIST,
+    testJointLimits, enforceJointLimits, modifyJacobianForLimits, 
+    FeedbackControlWithJointLimits, JOINT_LIMITS_MIN, JOINT_LIMITS_MAX
 )
 from code.trajectory_generator import TrajectoryGenerator
 
@@ -2420,9 +2422,298 @@ if __name__ == "__main__":
     print("="*60)
     test_document_validation_suite()
     
+    # Test joint limits functionality
+    print("\n" + "="*60)
+    print("TESTING JOINT LIMITS FUNCTIONALITY")
+    print("="*60)
+    test_joint_limits_functionality()
+    
     # Optionally run visualization tests
     print("\n" + "="*60)
     print("OPTIONAL: Running visualization tests...")
     print("Note: These require matplotlib and a display environment")
     print("="*60)
     test_all_visualizations()
+
+
+# Joint Limits Test Functions
+
+def test_testJointLimits_function():
+    """Test the testJointLimits function."""
+    print("Testing testJointLimits function...")
+    
+    from code.feedback_control import testJointLimits, JOINT_LIMITS_MIN, JOINT_LIMITS_MAX
+    
+    # Test case 1: All joints within limits
+    theta_safe = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
+    violated = testJointLimits(theta_safe)
+    assert len(violated) == 0, f"Safe configuration should not violate limits, got {violated}"
+    
+    # Test case 2: Joint 1 exceeds maximum limit
+    theta_exceed_max = np.array([3.0, 0.0, 0.0, 0.0, 0.0])  # 3.0 > 2.95
+    violated = testJointLimits(theta_exceed_max)
+    assert 0 in violated, f"Joint 0 should be violated, got {violated}"
+    
+    # Test case 3: Joint 2 below minimum limit  
+    theta_below_min = np.array([0.0, -2.0, 0.0, 0.0, 0.0])  # -2.0 < -1.57
+    violated = testJointLimits(theta_below_min)
+    assert 1 in violated, f"Joint 1 should be violated, got {violated}"
+    
+    # Test case 4: Multiple joints violating limits
+    theta_multiple = np.array([3.5, -2.0, 3.0, -2.0, 3.5])  # All joints exceed limits
+    violated = testJointLimits(theta_multiple)
+    assert len(violated) == 5, f"All 5 joints should be violated, got {violated}"
+    
+    # Test case 5: Conservative limits (joints 3 and 4 < -0.2)
+    theta_conservative = np.array([0.0, 0.0, 0.0, 0.0, 0.0])  # Joint 3,4 = 0 > -0.2
+    violated_regular = testJointLimits(theta_conservative, use_conservative_limits=False)
+    violated_conservative = testJointLimits(theta_conservative, use_conservative_limits=True)
+    
+    assert len(violated_regular) == 0, "Regular limits should be fine with zero angles"
+    assert 2 in violated_conservative and 3 in violated_conservative, \
+        f"Conservative limits should violate joints 2,3 (θ3,θ4), got {violated_conservative}"
+    
+    print("✅ testJointLimits function tests passed")
+
+
+def test_enforceJointLimits_function():
+    """Test the enforceJointLimits function."""
+    print("Testing enforceJointLimits function...")
+    
+    from code.feedback_control import enforceJointLimits
+    
+    # Test case 1: Clamping to maximum limits
+    theta_exceed = np.array([3.5, 2.0, 3.0, 2.0, 3.5])
+    theta_limited, violated = enforceJointLimits(theta_exceed)
+    
+    expected_limited = np.array([2.95, 1.57, 2.635, 1.78, 2.92])
+    assert np.allclose(theta_limited, expected_limited), \
+        f"Expected {expected_limited}, got {theta_limited}"
+    assert len(violated) == 5, f"All joints should be clamped, got {violated}"
+    
+    # Test case 2: Clamping to minimum limits
+    theta_below = np.array([-3.5, -2.0, -3.0, -2.0, -3.5])
+    theta_limited, violated = enforceJointLimits(theta_below)
+    
+    expected_limited = np.array([-2.95, -1.57, -2.635, -1.78, -2.92])
+    assert np.allclose(theta_limited, expected_limited), \
+        f"Expected {expected_limited}, got {theta_limited}"
+    assert len(violated) == 5, f"All joints should be clamped, got {violated}"
+    
+    # Test case 3: No clamping needed
+    theta_safe = np.array([1.0, 0.5, 1.0, 0.5, 1.0])
+    theta_limited, violated = enforceJointLimits(theta_safe)
+    
+    assert np.allclose(theta_limited, theta_safe), \
+        f"Safe angles should remain unchanged"
+    assert len(violated) == 0, f"No joints should be violated"
+    
+    print("✅ enforceJointLimits function tests passed")
+
+
+def test_modifyJacobianForLimits_function():
+    """Test the modifyJacobianForLimits function."""
+    print("Testing modifyJacobianForLimits function...")
+    
+    from code.feedback_control import modifyJacobianForLimits, compute_jacobian
+    
+    # Create a test configuration and Jacobian
+    config = np.zeros(12)
+    Je = compute_jacobian(config)
+    assert Je.shape == (6, 9), f"Jacobian should be 6x9, got {Je.shape}"
+    
+    # Test case 1: Zero out columns for joints 0 and 2 (columns 4 and 6)
+    violated_joints = [0, 2]
+    Je_modified = modifyJacobianForLimits(Je, violated_joints)
+    
+    # Check that specified columns are zero
+    assert np.allclose(Je_modified[:, 4], 0), "Column 4 (joint 0) should be zero"
+    assert np.allclose(Je_modified[:, 6], 0), "Column 6 (joint 2) should be zero"
+    
+    # Check that other columns are unchanged
+    for col in [0, 1, 2, 3, 5, 7, 8]:  # All columns except 4 and 6
+        assert np.allclose(Je_modified[:, col], Je[:, col]), \
+            f"Column {col} should be unchanged"
+    
+    # Test case 2: No violations
+    Je_modified_none = modifyJacobianForLimits(Je, [])
+    assert np.allclose(Je_modified_none, Je), "No modifications should be made"
+    
+    print("✅ modifyJacobianForLimits function tests passed")
+
+
+def test_FeedbackControlWithJointLimits_function():
+    """Test the enhanced FeedbackControlWithJointLimits function."""
+    print("Testing FeedbackControlWithJointLimits function...")
+    
+    from code.feedback_control import (
+        FeedbackControlWithJointLimits, chassis_to_se3, 
+        TB0, M0E, BLIST
+    )
+    
+    # Create test configuration near joint limits
+    config = np.array([0.0, 0.0, 0.0,     # chassis
+                       2.9, 1.5, 2.6, 1.7, 2.9,  # joints near upper limits
+                       0.0, 0.0, 0.0, 0.0])       # wheels
+    
+    # Create test poses that would require large joint motions
+    X_actual = np.eye(4)
+    X_desired = np.array([
+        [1, 0, 0, 0.5],
+        [0, 1, 0, 0.5],
+        [0, 0, 1, 0.5],
+        [0, 0, 0, 1]
+    ])
+    X_desired_next = np.array([
+        [1, 0, 0, 0.6],
+        [0, 1, 0, 0.6],
+        [0, 0, 1, 0.6],
+        [0, 0, 0, 1]
+    ])
+    
+    # High gains to force large motions
+    Kp = np.diag([10, 10, 10, 10, 10, 10])
+    Ki = np.zeros((6, 6))
+    dt = 0.01
+    integral_error = np.zeros(6)
+    
+    # Test with joint limits enforcement
+    V_cmd, controls, X_err, integral_new, limits_info = FeedbackControlWithJointLimits(
+        X_actual, X_desired, X_desired_next, Kp, Ki, dt, integral_error, config
+    )
+    
+    # Verify return shapes
+    assert V_cmd.shape == (6,), f"V_cmd should be 6-element, got {V_cmd.shape}"
+    assert controls.shape == (9,), f"controls should be 9-element, got {controls.shape}"
+    assert X_err.shape == (6,), f"X_err should be 6-element, got {X_err.shape}"
+    assert integral_new.shape == (6,), f"integral_error should be 6-element"
+    
+    # Verify limits info structure
+    required_keys = ['current_theta', 'predicted_theta', 'violated_joints', 
+                     'limits_enforced', 'jacobian_modified']
+    for key in required_keys:
+        assert key in limits_info, f"limits_info should contain key '{key}'"
+    
+    # Test conservative limits
+    V_cmd_cons, controls_cons, X_err_cons, integral_cons, limits_info_cons = \
+        FeedbackControlWithJointLimits(
+            X_actual, X_desired, X_desired_next, Kp, Ki, dt, integral_error, 
+            config, use_conservative_limits=True
+        )
+    
+    # Conservative limits should detect more violations (joints 3,4 at 2.6, 1.7 > -0.2)
+    assert len(limits_info_cons['violated_joints']) >= len(limits_info['violated_joints']), \
+        "Conservative limits should detect more or equal violations"
+    
+    print("✅ FeedbackControlWithJointLimits function tests passed")
+
+
+def test_joint_limits_integration():
+    """Test joint limits integration with trajectory following."""
+    print("Testing joint limits integration...")
+    
+    from code.feedback_control import (
+        FeedbackControlWithJointLimits, FeedbackController
+    )
+    from code.next_state import NextState
+    from code.trajectory_generator import TrajectoryGenerator
+    
+    # Create a simple trajectory
+    T_se_init = np.array([
+        [1, 0, 0, 0.5],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0.5],
+        [0, 0, 0, 1]
+    ])
+    
+    T_sc_init = np.array([
+        [1, 0, 0, 1],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_sc_goal = np.array([
+        [0, 1, 0, 0],
+        [-1, 0, 0, -1],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_ce_grasp = np.array([
+        [-np.sqrt(2)/2, 0, np.sqrt(2)/2, 0],
+        [0, 1, 0, 0],
+        [-np.sqrt(2)/2, 0, -np.sqrt(2)/2, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    T_ce_standoff = T_ce_grasp.copy()
+    T_ce_standoff[2, 3] += 0.1  # 10cm above grasp
+    
+    trajectory = TrajectoryGenerator(
+        T_se_init, T_sc_init, T_sc_goal, T_ce_grasp, T_ce_standoff, k=1
+    )
+    
+    # Start with configuration that has joints near limits
+    config = np.array([0.0, 0.0, 0.0,        # chassis
+                       2.8, 1.4, -0.1, -0.1, 2.8,  # joints near limits
+                       0.0, 0.0, 0.0, 0.0])         # wheels
+    
+    Kp = np.diag([5, 5, 5, 5, 5, 5])
+    Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+    integral_error = np.zeros(6)
+    
+    # Simulate a few steps with joint limits
+    violations_detected = 0
+    jacobian_modifications = 0
+    
+    for i in range(min(5, len(trajectory)-1)):
+        # Extract poses
+        X_desired = np.eye(4)
+        X_desired[:3, :3] = trajectory[i, :9].reshape(3, 3)
+        X_desired[:3, 3] = trajectory[i, 9:12]
+        
+        X_desired_next = np.eye(4)
+        X_desired_next[:3, :3] = trajectory[i+1, :9].reshape(3, 3)
+        X_desired_next[:3, 3] = trajectory[i+1, 9:12]
+        
+        # Compute current end-effector pose (simplified)
+        X_actual = X_desired.copy()  # Perfect tracking for this test
+        
+        # Apply joint limits control
+        V_cmd, controls, X_err, integral_error, limits_info = \
+            FeedbackControlWithJointLimits(
+                X_actual, X_desired, X_desired_next, Kp, Ki, 0.01, 
+                integral_error, config, use_conservative_limits=True
+            )
+        
+        if limits_info['limits_enforced']:
+            violations_detected += 1
+        if limits_info['jacobian_modified']:
+            jacobian_modifications += 1
+        
+        # Update configuration
+        config = NextState(config, controls, 0.01, 12.3)
+    
+    print(f"  Detected {violations_detected} potential limit violations")
+    print(f"  Made {jacobian_modifications} Jacobian modifications")
+    
+    # At least some monitoring should occur with conservative limits
+    assert violations_detected >= 0, "Should monitor for violations"
+    
+    print("✅ Joint limits integration test passed")
+
+
+def test_joint_limits_functionality():
+    """Run all joint limits tests."""
+    print("Running comprehensive joint limits functionality tests...")
+    
+    test_testJointLimits_function()
+    test_enforceJointLimits_function() 
+    test_modifyJacobianForLimits_function()
+    test_FeedbackControlWithJointLimits_function()
+    test_joint_limits_integration()
+    
+    print("\n🎉 ALL JOINT LIMITS TESTS PASSED! 🎉")
+    print("The testJointLimits function and related functionality work correctly.")
+

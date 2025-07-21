@@ -47,6 +47,97 @@ INV_TB0 = np.linalg.inv(TB0)
 # Integral error bounds for anti-windup (rad for orientation, m for position)
 INTEGRAL_BOUNDS = np.array([0.5, 0.5, 0.5, 0.1, 0.1, 0.1])
 
+# Joint limits for youBot arm (in radians)
+JOINT_LIMITS_MIN = np.array([-2.95, -1.57, -2.635, -1.78, -2.92])
+JOINT_LIMITS_MAX = np.array([2.95, 1.57, 2.635, 1.78, 2.92])
+
+# Conservative joint limits to avoid singularities and self-collisions
+# As suggested in the document, constrain joints 3 and 4 to be less than -0.2 rad
+JOINT_LIMITS_CONSERVATIVE_MIN = np.array([-2.95, -1.57, -2.635, -1.78, -2.92])
+JOINT_LIMITS_CONSERVATIVE_MAX = np.array([2.95, 1.57, -0.2, -0.2, 2.92])
+
+
+def testJointLimits(theta, use_conservative_limits=False):
+    """Test if joint angles violate joint limits.
+    
+    This function returns a list of joint limits that are violated
+    given the robot arm's configuration θ.
+    
+    Args:
+        theta: 5-element array of joint angles (radians)
+        use_conservative_limits: If True, use conservative limits to avoid 
+                               singularities and self-collisions
+    
+    Returns:
+        violated_joints: List of joint indices (0-4) that violate limits
+    """
+    if use_conservative_limits:
+        theta_min = JOINT_LIMITS_CONSERVATIVE_MIN
+        theta_max = JOINT_LIMITS_CONSERVATIVE_MAX
+    else:
+        theta_min = JOINT_LIMITS_MIN
+        theta_max = JOINT_LIMITS_MAX
+    
+    violated_joints = []
+    
+    for i in range(len(theta)):
+        if theta[i] < theta_min[i] or theta[i] > theta_max[i]:
+            violated_joints.append(i)
+    
+    return violated_joints
+
+
+def enforceJointLimits(theta, use_conservative_limits=False):
+    """Enforce joint limits by clamping joint angles.
+    
+    Args:
+        theta: 5-element array of joint angles (radians)
+        use_conservative_limits: If True, use conservative limits
+    
+    Returns:
+        theta_limited: Joint angles clamped to limits
+        violated_joints: List of joint indices that were clamped
+    """
+    if use_conservative_limits:
+        theta_min = JOINT_LIMITS_CONSERVATIVE_MIN
+        theta_max = JOINT_LIMITS_CONSERVATIVE_MAX
+    else:
+        theta_min = JOINT_LIMITS_MIN
+        theta_max = JOINT_LIMITS_MAX
+    
+    theta_limited = np.clip(theta, theta_min, theta_max)
+    violated_joints = []
+    
+    for i in range(len(theta)):
+        if not np.isclose(theta[i], theta_limited[i]):
+            violated_joints.append(i)
+    
+    return theta_limited, violated_joints
+
+
+def modifyJacobianForLimits(Je, violated_joints):
+    """Modify Jacobian to prevent motion of joints at limits.
+    
+    As described in the document, set columns corresponding to 
+    offending joints to all zeros so the pseudoinverse will not
+    request motion from these joints.
+    
+    Args:
+        Je: 6x9 Jacobian matrix
+        violated_joints: List of joint indices (0-4) that are at limits
+    
+    Returns:
+        Je_modified: Modified Jacobian with zero columns for limited joints
+    """
+    Je_modified = Je.copy()
+    
+    # Joints are columns 4-8 in the 6x9 Jacobian (after the 4 wheel columns)
+    for joint_idx in violated_joints:
+        jacobian_col = 4 + joint_idx  # Offset by 4 wheel columns
+        Je_modified[:, jacobian_col] = 0.0
+    
+    return Je_modified
+
 
 def chassis_to_se3(phi, x, y):
     """Convert chassis configuration to SE(3) transformation matrix.
@@ -128,6 +219,80 @@ def compute_jacobian(config):
     Je = np.hstack([J_base, J_arm])
     
     return Je
+
+
+def FeedbackControlWithJointLimits(X_actual, X_desired, X_desired_next, Kp, Ki, dt, 
+                                   integral_error_prev, config, use_conservative_limits=False):
+    """Feed-forward + PI control with joint limits enforcement.
+    
+    This enhanced version checks if the computed controls would violate joint limits
+    at the next time step and modifies the Jacobian accordingly.
+    
+    Args:
+        X_actual: 4x4 SE(3) matrix - current end-effector pose
+        X_desired: 4x4 - reference pose at time step i
+        X_desired_next: 4x4 - reference pose at time step i+1
+        Kp: 6x6 diagonal proportional gain matrix
+        Ki: 6x6 diagonal integral gain matrix
+        dt: scalar time step (seconds)
+        integral_error_prev: 6-vector carried over from last call
+        config: 12-element configuration [phi, x, y, theta1-5, w1-4]
+        use_conservative_limits: If True, use conservative joint limits
+        
+    Returns:
+        V_cmd: 6-vector - commanded twist in frame {e}
+        controls: 9-vector - [u1 u2 u3 u4 θ̇1 … θ̇5]
+        X_err: 6-vector - twist that takes X_actual to X_desired
+        integral_error_new: 6-vector - updated ∫X_err dt
+        joint_limits_info: dict with joint limits information
+    """
+    
+    # 1. Feed-forward twist
+    Vd = (1/dt) * mr.se3ToVec(mr.MatrixLog6(np.linalg.inv(X_desired) @ X_desired_next))
+    
+    # 2. Configuration error (twist)
+    X_err = mr.se3ToVec(mr.MatrixLog6(np.linalg.inv(X_actual) @ X_desired))
+    
+    # 3. Integral update with anti-windup guard
+    integral_error_new = integral_error_prev + X_err * dt
+    integral_error_new = np.clip(integral_error_new, -INTEGRAL_BOUNDS, INTEGRAL_BOUNDS)
+    
+    # 4. Commanded twist (body frame)
+    V_cmd = (mr.Adjoint(np.linalg.inv(X_actual) @ X_desired) @ Vd + 
+             Kp @ X_err + 
+             Ki @ integral_error_new)
+    
+    # 5. Initial Jacobian and controls calculation
+    Je = compute_jacobian(config)
+    controls_raw = np.linalg.pinv(Je, rcond=PINV_TOLERANCE) @ V_cmd
+    
+    # 6. Check for joint limit violations
+    current_theta = config[3:8]  # Current joint angles
+    theta_dot = controls_raw[4:9]  # Joint velocities
+    predicted_theta = current_theta + theta_dot * dt  # Predicted joint angles
+    
+    # Test if predicted configuration violates limits
+    violated_joints = testJointLimits(predicted_theta, use_conservative_limits)
+    
+    joint_limits_info = {
+        'current_theta': current_theta.copy(),
+        'predicted_theta': predicted_theta.copy(),
+        'violated_joints': violated_joints.copy(),
+        'limits_enforced': len(violated_joints) > 0
+    }
+    
+    # 7. Modify Jacobian if limits would be violated
+    if len(violated_joints) > 0:
+        Je_modified = modifyJacobianForLimits(Je, violated_joints)
+        controls_raw = np.linalg.pinv(Je_modified, rcond=PINV_TOLERANCE) @ V_cmd
+        joint_limits_info['jacobian_modified'] = True
+    else:
+        joint_limits_info['jacobian_modified'] = False
+    
+    # 8. Apply speed limits
+    controls = np.clip(controls_raw, -SPEED_LIMIT, SPEED_LIMIT)
+    
+    return V_cmd, controls, X_err, integral_error_new, joint_limits_info
 
 
 def FeedbackControl(X_actual, X_desired, X_desired_next, Kp, Ki, dt, integral_error_prev, config=None):
