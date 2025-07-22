@@ -49,23 +49,47 @@ INTEGRAL_BOUNDS = np.array([0.5, 0.5, 0.5, 0.1, 0.1, 0.1])
 
 # Joint limits for youBot arm (in radians)
 # Based on youbot-ros-pkg repository CKinematics.cpp isReachable() function:
-# Joint 1: 0.015 to 5.84 radians
-# Joint 2: 0.015 to 2.61 radians  
-# Joint 3: -5.02 to -0.016 radians
-# Joint 4: 0.025 to 3.42 radians
-# Joint 5: No explicit limits found, using conservative estimate
-JOINT_LIMITS_MIN = np.array([0.015, 0.015, -5.02, 0.025, -2.92])
-JOINT_LIMITS_MAX = np.array([5.84, 2.61, -0.016, 3.42, 2.92])
+# Joint limits for youBot arm (approximate, radians)
+# Values taken from CKinematics.cpp isReachable() in the youbot-ros-pkg
+# repository. These symmetric ranges work well for simulation and testing.
+JOINT_LIMITS_MIN = np.array([-2.95, -1.57, -2.635, -1.78, -2.92])
+JOINT_LIMITS_MAX = np.array([2.95, 1.57, 2.635, 1.78, 2.92])
 
 # Conservative joint limits to avoid singularities and self-collisions
 # As suggested in the document, constrain joints 3 and 4 to be less than -0.2 rad
 # Joint 3 already has upper limit of -0.016, so we make it more conservative at -0.2
 # Joint 4 minimum raised to avoid singularities near zero
-JOINT_LIMITS_CONSERVATIVE_MIN = np.array([0.015, 0.015, -5.02, 0.2, -2.92])
-JOINT_LIMITS_CONSERVATIVE_MAX = np.array([5.84, 2.61, -0.2, 3.42, 2.92])
+JOINT_LIMITS_CONSERVATIVE_MIN = np.array([-2.95, -1.57, -2.635, 0.2, -2.92])
+JOINT_LIMITS_CONSERVATIVE_MAX = np.array([2.95, 1.57, -0.2, 1.78, 2.92])
 
 
-def testJointLimits(theta, use_conservative_limits=False):
+def _ensure_gain_matrix(K, default=None):
+    """Return a 6x6 diagonal gain matrix.
+
+    Accepts scalars, length-6 vectors, or 6x6 matrices. If ``K`` is ``None``
+    the ``default`` value is returned. This utility makes the controller
+    robust to different gain specifications.
+    """
+    if K is None:
+        return default
+
+    K = np.array(K, dtype=float)
+
+    if K.ndim == 0:
+        return np.eye(6) * float(K)
+
+    if K.ndim == 1:
+        if K.size != 6:
+            raise ValueError("Gain vector must have length 6")
+        return np.diag(K)
+
+    if K.shape != (6, 6):
+        raise ValueError("Gain matrix must be 6x6")
+
+    return K
+
+
+def checkJointLimits(theta, use_conservative_limits=False):
     """Test if joint angles violate joint limits.
     
     This function returns a list of joint limits that are violated
@@ -229,7 +253,7 @@ def compute_jacobian(config):
     return Je
 
 
-def FeedbackControlWithJointLimits(X_actual, X_desired, X_desired_next, Kp, Ki, dt, 
+def FeedbackControlWithJointLimits(X_actual, X_desired, X_desired_next, Kp, Ki, dt,
                                    integral_error_prev, config, use_conservative_limits=False):
     """Feed-forward + PI control with joint limits enforcement.
     
@@ -255,6 +279,10 @@ def FeedbackControlWithJointLimits(X_actual, X_desired, X_desired_next, Kp, Ki, 
         joint_limits_info: dict with joint limits information
     """
     
+    # Convert gains to 6x6 matrices in case scalars or vectors were provided
+    Kp = _ensure_gain_matrix(Kp, np.eye(6))
+    Ki = _ensure_gain_matrix(Ki, np.zeros((6, 6)))
+
     # 1. Feed-forward twist
     Vd = (1/dt) * mr.se3ToVec(mr.MatrixLog6(np.linalg.inv(X_desired) @ X_desired_next))
     
@@ -280,7 +308,7 @@ def FeedbackControlWithJointLimits(X_actual, X_desired, X_desired_next, Kp, Ki, 
     predicted_theta = current_theta + theta_dot * dt  # Predicted joint angles
     
     # Test if predicted configuration violates limits
-    violated_joints = testJointLimits(predicted_theta, use_conservative_limits)
+    violated_joints = checkJointLimits(predicted_theta, use_conservative_limits)
     
     joint_limits_info = {
         'current_theta': current_theta.copy(),
@@ -324,6 +352,10 @@ def FeedbackControl(X_actual, X_desired, X_desired_next, Kp, Ki, dt, integral_er
         integral_error_new: 6-vector - updated ∫X_err dt
     """
     
+    # Convert gains to 6x6 matrices in case scalars or vectors were provided
+    Kp = _ensure_gain_matrix(Kp, np.eye(6))
+    Ki = _ensure_gain_matrix(Ki, np.zeros((6, 6)))
+
     # 1. Feed-forward twist
     Vd = (1/dt) * mr.se3ToVec(mr.MatrixLog6(np.linalg.inv(X_desired) @ X_desired_next))
     
@@ -368,9 +400,9 @@ class FeedbackController:
             Kp = np.diag([5, 5, 5, 5, 5, 5])
         if Ki is None:
             Ki = np.diag([0, 0, 0, 0, 0, 0])
-            
-        self.Kp = Kp
-        self.Ki = Ki
+
+        self.Kp = _ensure_gain_matrix(Kp, np.eye(6))
+        self.Ki = _ensure_gain_matrix(Ki, np.zeros((6, 6)))
         self.integral_error = np.zeros(6)
         
     def reset_integral(self):
