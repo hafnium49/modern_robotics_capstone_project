@@ -133,8 +133,8 @@ def create_initial_config_with_error(trajectory_first_row):
     x_init = p_desired[0] + 0.15  # +0.15m position error in x  
     y_init = p_desired[1] + 0.15  # +0.15m position error in y (total ~0.21m > 0.20m requirement)
     
-    # Joint angles with small errors (don't want to over-constrain the system)
-    theta_init = np.array([0.1, -0.1, 0.1, -0.1, 0.05])  # Small joint angle errors
+    # Joint angles - use better starting configuration for manipulation
+    theta_init = np.array([0.0, 0.0, -0.2, -1.6, 0.0])  # More suitable for manipulation
     
     # Wheel angles (not critical for initial pose)
     w_init = np.zeros(4)
