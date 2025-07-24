@@ -19,7 +19,7 @@ from code.next_state import NextState
 from code.feedback_control import (
     FeedbackControl, FeedbackController, chassis_to_se3, get_F6, compute_jacobian,
     R, L, W, DT, SPEED_LIMIT, PINV_TOLERANCE, TB0, M0E, BLIST,
-    testJointLimits, enforceJointLimits, modifyJacobianForLimits,
+    checkJointLimits, enforceJointLimits, modifyJacobianForLimits,
     FeedbackControlWithJointLimits, JOINT_LIMITS_MIN, JOINT_LIMITS_MAX
 )
 from code.run_capstone import compute_current_ee_pose
@@ -2444,32 +2444,32 @@ def test_testJointLimits_function():
     """Test the testJointLimits function."""
     print("Testing testJointLimits function...")
     
-    from code.feedback_control import testJointLimits, JOINT_LIMITS_MIN, JOINT_LIMITS_MAX
+    from code.feedback_control import checkJointLimits, JOINT_LIMITS_MIN, JOINT_LIMITS_MAX
     
     # Test case 1: All joints within limits
     theta_safe = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
-    violated = testJointLimits(theta_safe)
+    violated = checkJointLimits(theta_safe)
     assert len(violated) == 0, f"Safe configuration should not violate limits, got {violated}"
     
     # Test case 2: Joint 1 exceeds maximum limit
     theta_exceed_max = np.array([3.0, 0.0, 0.0, 0.0, 0.0])  # 3.0 > 2.95
-    violated = testJointLimits(theta_exceed_max)
+    violated = checkJointLimits(theta_exceed_max)
     assert 0 in violated, f"Joint 0 should be violated, got {violated}"
     
     # Test case 3: Joint 2 below minimum limit  
     theta_below_min = np.array([0.0, -2.0, 0.0, 0.0, 0.0])  # -2.0 < -1.57
-    violated = testJointLimits(theta_below_min)
+    violated = checkJointLimits(theta_below_min)
     assert 1 in violated, f"Joint 1 should be violated, got {violated}"
     
     # Test case 4: Multiple joints violating limits
     theta_multiple = np.array([3.5, -2.0, 3.0, -2.0, 3.5])  # All joints exceed limits
-    violated = testJointLimits(theta_multiple)
+    violated = checkJointLimits(theta_multiple)
     assert len(violated) == 5, f"All 5 joints should be violated, got {violated}"
     
     # Test case 5: Conservative limits (joints 3 and 4 < -0.2)
     theta_conservative = np.array([0.0, 0.0, 0.0, 0.0, 0.0])  # Joint 3,4 = 0 > -0.2
-    violated_regular = testJointLimits(theta_conservative, use_conservative_limits=False)
-    violated_conservative = testJointLimits(theta_conservative, use_conservative_limits=True)
+    violated_regular = checkJointLimits(theta_conservative, use_conservative_limits=False)
+    violated_conservative = checkJointLimits(theta_conservative, use_conservative_limits=True)
     
     assert len(violated_regular) == 0, "Regular limits should be fine with zero angles"
     assert 2 in violated_conservative and 3 in violated_conservative, \
