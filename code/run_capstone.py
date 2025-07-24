@@ -92,20 +92,23 @@ def create_grasp_transforms():
         Tce_grasp: 4x4 SE(3) - grasp transform relative to cube
         Tce_standoff: 4x4 SE(3) - standoff transform relative to cube
     """
-    # Tce_grasp = diag(1,1,1), p = [0, 0, 0.02] m (cube halfway into fingers)
+    # Tce_grasp: End-effector pointing downward to grasp cube from above
+    # Rotation: 180° about x-axis to flip the gripper downward
+    # Position: [0, 0, 0.02] m (cube halfway into fingers)
     Tce_grasp = np.array([
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0.02],
-        [0, 0, 0, 1]
+        [1,  0,  0, 0],
+        [0, -1,  0, 0],
+        [0,  0, -1, 0.02],
+        [0,  0,  0, 1]
     ])
     
-    # Tce_standoff = Tce_grasp shifted +[0,0,0.10] m in z_c
+    # Tce_standoff = Tce_grasp shifted +[0,0,0.10] m in z_c (before rotation)
+    # Since we rotated 180° about x, the standoff should be further in -z direction
     Tce_standoff = np.array([
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0.12],  # 0.02 + 0.10
-        [0, 0, 0, 1]
+        [1,  0,  0, 0],
+        [0, -1,  0, 0],
+        [0,  0, -1, 0.12],  # 0.02 + 0.10
+        [0,  0,  0, 1]
     ])
     
     return Tce_grasp, Tce_standoff

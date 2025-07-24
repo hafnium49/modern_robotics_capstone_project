@@ -203,8 +203,8 @@ def run_best_scenario(output_dir=None):
     print("="*60)
     
     # Well-tuned feedforward + PI controller
-    Kp = np.diag([4, 4, 4, 4, 4, 4])  # Moderate gains for smooth response
-    Ki = np.diag([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])  # Small integral for steady-state
+    Kp = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Very small gains like milestone3
+    Ki = np.diag([0.001, 0.001, 0.001, 0.001, 0.001, 0.001])  # Minimal integral
     
     return run_scenario(
         "best", Kp, Ki,
