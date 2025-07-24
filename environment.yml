@@ -1,0 +1,20 @@
+name: modern_robotics
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy>=1.20.0
+  - scipy>=1.7.0
+  - matplotlib>=3.5.0
+  - jupyter
+  - ipython
+  - pytest
+  - pandas
+  - seaborn
+  - pip
+  - pip:
+    - modern_robotics>=1.0.0
+    - pytest-cov
+    - black
+    - flake8
