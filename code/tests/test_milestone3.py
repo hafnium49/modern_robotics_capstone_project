@@ -388,8 +388,8 @@ def test_jacobian_computation():
     # Compute Jacobian
     J = compute_jacobian(config)
     
-    # Validate Jacobian properties
-    assert J.shape == (6, 13), f"Jacobian shape incorrect: {J.shape}"
+    # Validate Jacobian properties (6x9 for mobile manipulator)
+    assert J.shape == (6, 9), f"Jacobian shape incorrect: {J.shape}"
     assert np.all(np.isfinite(J)), "Jacobian contains invalid values"
     
     # Check that Jacobian is not all zeros
@@ -401,7 +401,7 @@ def test_jacobian_computation():
         test_config[3:8] = np.random.uniform(-1, 1, 5)  # Random joint angles
         J_test = compute_jacobian(test_config)
         
-        assert J_test.shape == (6, 13), f"Jacobian shape incorrect for config {i}"
+        assert J_test.shape == (6, 9), f"Jacobian shape incorrect for config {i}"
         assert np.all(np.isfinite(J_test)), f"Jacobian contains invalid values for config {i}"
     
     print("✓ Jacobian computation test passed")
@@ -411,19 +411,24 @@ def test_f6_matrix():
     """Test F6 matrix computation."""
     print("Testing F6 matrix...")
     
-    config = DEFAULT_CONFIG.copy()
-    F6 = get_F6(config)
+    # get_F6 takes no arguments
+    F6 = get_F6()
     
     # Validate F6 properties
     assert F6.shape == (6, 4), f"F6 shape incorrect: {F6.shape}"
     assert np.all(np.isfinite(F6)), "F6 contains invalid values"
     
-    # F6 should depend on chassis orientation
-    config_rotated = config.copy()
-    config_rotated[0] = np.pi/4  # Rotate chassis
-    F6_rotated = get_F6(config_rotated)
+    # F6 should be the same each time (it's a constant matrix)
+    F6_second = get_F6()
+    assert np.allclose(F6, F6_second), "F6 should be consistent"
     
-    assert not np.allclose(F6, F6_rotated), "F6 should change with chassis orientation"
+    # Check that F6 has expected structure (only rows 2, 3, 4 should be non-zero)
+    expected_nonzero_rows = [2, 3, 4]  # ωz, vx, vy
+    for i in range(6):
+        if i in expected_nonzero_rows:
+            assert np.linalg.norm(F6[i, :]) > 1e-6, f"Row {i} should be non-zero"
+        else:
+            assert np.allclose(F6[i, :], 0), f"Row {i} should be zero"
     
     print("✓ F6 matrix test passed")
 
@@ -432,29 +437,40 @@ def test_chassis_to_se3():
     """Test chassis configuration to SE(3) conversion."""
     print("Testing chassis to SE(3) conversion...")
     
-    # Test identity case
-    config_identity = np.array([0.0, 0.0, 0.0])
-    T_identity = chassis_to_se3(config_identity)
+    # Test identity case - chassis_to_se3 takes separate phi, x, y arguments
+    T_identity = chassis_to_se3(0.0, 0.0, 0.0)
     
     expected_identity = np.eye(4)
-    expected_identity[2, 3] = 0.0963  # Z offset
+    # No Z offset for chassis_to_se3 (that's added elsewhere)
     
     assert np.allclose(T_identity, expected_identity), "Identity conversion incorrect"
     
     # Test translation
-    config_translated = np.array([0.0, 1.0, 2.0])
-    T_translated = chassis_to_se3(config_translated)
+    T_translated = chassis_to_se3(0.0, 1.0, 2.0)
     
     assert np.allclose(T_translated[0, 3], 1.0), "X translation incorrect"
     assert np.allclose(T_translated[1, 3], 2.0), "Y translation incorrect"
     
     # Test rotation
-    config_rotated = np.array([np.pi/2, 0.0, 0.0])
-    T_rotated = chassis_to_se3(config_rotated)
+    T_rotated = chassis_to_se3(np.pi/2, 0.0, 0.0)
     
     expected_rotation = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
     assert np.allclose(T_rotated[:3, :3], expected_rotation, atol=1e-10), \
         "Rotation matrix incorrect"
+    
+    # Test combined rotation and translation
+    T_combined = chassis_to_se3(np.pi/4, 1.0, 1.0)
+    assert np.allclose(T_combined[0, 3], 1.0), "Combined X translation incorrect"
+    assert np.allclose(T_combined[1, 3], 1.0), "Combined Y translation incorrect"
+    
+    sqrt2_2 = np.sqrt(2) / 2
+    expected_rotation_combined = np.array([
+        [sqrt2_2, -sqrt2_2, 0],
+        [sqrt2_2, sqrt2_2, 0],
+        [0, 0, 1]
+    ])
+    assert np.allclose(T_combined[:3, :3], expected_rotation_combined, atol=1e-10), \
+        "Combined rotation matrix incorrect"
     
     print("✓ Chassis to SE(3) conversion test passed")
 
