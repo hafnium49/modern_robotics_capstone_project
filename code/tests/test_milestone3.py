@@ -736,10 +736,10 @@ def generate_feedforward_csv(output_file="feedforward_test.csv", initial_error=N
                        0.0, 0.0, 0.0, 0.0, 0.0,  # arm joints
                        0.0, 0.0, 0.0, 0.0])  # wheels
     
-    # Feedforward-dominant control with minimal feedback for stability
-    # Use very small gains so the control is dominated by feedforward
-    Kp = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Small proportional gains  
-    Ki = np.diag([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])   # No integral action
+    # Pure feedforward control as specified in the document
+    # K_p = K_i = 0 for feedforward-only testing
+    Kp = np.diag([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])  # No proportional gains
+    Ki = np.diag([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])  # No integral action
     
     # Control parameters
     dt = DT
