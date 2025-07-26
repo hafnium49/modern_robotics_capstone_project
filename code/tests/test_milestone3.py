@@ -1324,17 +1324,17 @@ def test_complete_milestone_integration():
     ])
     
     T_ce_grasp = np.array([
-        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
-        [0, 1, 0, 0],
-        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0],
-        [0, 0, 0, 1]
+        [1,  0,  0, 0],
+        [0, -1,  0, 0],
+        [0,  0, -1, 0.02],
+        [0,  0,  0, 1]
     ])
     
     T_ce_standoff = np.array([
-        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
-        [0, 1, 0, 0],
-        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0.1],
-        [0, 0, 0, 1]
+        [1,  0,  0, 0],
+        [0, -1,  0, 0],
+        [0,  0, -1, 0.12],
+        [0,  0,  0, 1]
     ])
     
     # Generate reference trajectory
@@ -1413,17 +1413,17 @@ def test_feedforward_only_perfect_initial():
     ])
     
     T_ce_grasp = np.array([
-        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
-        [0, 1, 0, 0],
-        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0],
-        [0, 0, 0, 1]
+        [1,  0,  0, 0],
+        [0, -1,  0, 0],
+        [0,  0, -1, 0.02],
+        [0,  0,  0, 1]
     ])
     
     T_ce_standoff = np.array([
-        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
-        [0, 1, 0, 0],
-        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0.1],
-        [0, 0, 0, 1]
+        [1,  0,  0, 0],
+        [0, -1,  0, 0],
+        [0,  0, -1, 0.12],
+        [0,  0,  0, 1]
     ])
     
     # Generate reference trajectory  
@@ -1545,16 +1545,16 @@ def test_feedforward_with_initial_error():
     ])
     
     T_ce_grasp = np.array([
-        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
-        [0, 1, 0, 0],
-        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0],
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0.02],
         [0, 0, 0, 1]
     ])
     
     T_ce_standoff = np.array([
-        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
-        [0, 1, 0, 0],
-        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0.1],
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0.12],
         [0, 0, 0, 1]
     ])
     
@@ -1675,16 +1675,16 @@ def test_feedforward_trajectory_following():
     ])
     
     T_ce_grasp = np.array([
-        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
-        [0, 1, 0, 0],
-        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0],
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0.02],
         [0, 0, 0, 1]
     ])
     
     T_ce_standoff = np.array([
-        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
-        [0, 1, 0, 0],
-        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0.1],
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0.12],
         [0, 0, 0, 1]
     ])
     
