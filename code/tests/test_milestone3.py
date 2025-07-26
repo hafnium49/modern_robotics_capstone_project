@@ -52,17 +52,17 @@ def create_simple_trajectory():
     ])
     
     T_ce_grasp = np.array([
-        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
-        [0, 1, 0, 0],
-        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0],
-        [0, 0, 0, 1]
+        [1,  0,  0, 0],
+        [0, -1,  0, 0],
+        [0,  0, -1, 0.02],
+        [0,  0,  0, 1]
     ])
     
     T_ce_standoff = np.array([
-        [-1.0/np.sqrt(2), 0, 1.0/np.sqrt(2), 0],
-        [0, 1, 0, 0],
-        [-1.0/np.sqrt(2), 0, -1.0/np.sqrt(2), 0.1],
-        [0, 0, 0, 1]
+        [1,  0,  0, 0],
+        [0, -1,  0, 0],
+        [0,  0, -1, 0.12],
+        [0,  0,  0, 1]
     ])
     
     return TrajectoryGenerator(
