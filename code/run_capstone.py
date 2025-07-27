@@ -23,8 +23,9 @@ from pathlib import Path
 # Import milestone components
 from .next_state import NextState
 from .trajectory_generator import TrajectoryGenerator
-from .feedback_control import FeedbackControl, compute_jacobian
+from .feedback_control import FeedbackControl, FeedbackControlWithJointLimits, compute_jacobian
 from .feedback_control import R, L, W, DT, TB0, M0E, BLIST, INV_TB0, PINV_TOLERANCE
+from .feedback_control import checkJointLimits, enforceJointLimits
 
 
 # Fixed constants for Milestone 4
@@ -137,13 +138,24 @@ def create_initial_config_with_error(trajectory_first_row):
     y_init = p_desired[1] + 0.15  # +0.15m position error in y (total ~0.21m > 0.20m requirement)
     
     # Joint angles - use better starting configuration for manipulation
-    theta_init = np.array([0.0, 0.0, -0.2, -1.6, 0.0])  # More suitable for manipulation
+    # Conservative limits applied to avoid singularities (joints 3&4 away from zero)
+    theta_init = np.array([0.0, 0.0, -0.3, -1.6, 0.0])  # Joint 3 < -0.2 rad as recommended
     
     # Wheel angles (not critical for initial pose)
     w_init = np.zeros(4)
     
     # Combine into 12-element configuration
     config = np.hstack([phi_init, x_init, y_init, theta_init, w_init])
+    
+    # Validate initial configuration satisfies joint limits as required by document
+    initial_theta = config[3:8]
+    violated_joints = checkJointLimits(initial_theta, use_conservative_limits=True)
+    if violated_joints:
+        print(f"Warning: Initial configuration violates conservative joint limits for joints {violated_joints}")
+        # Enforce limits to ensure safe starting configuration
+        theta_limited, _ = enforceJointLimits(initial_theta, use_conservative_limits=True)
+        config[3:8] = theta_limited
+        print(f"Initial joint angles adjusted to satisfy conservative limits")
     
     return config
 
@@ -246,12 +258,13 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     config_log = np.zeros((N_points, 12))
     error_log = np.zeros((N_points-1, 6))
     trajectory_log = np.zeros((N_points, 13))
+    joint_limits_log = []  # Track joint limit violations
     
     # Log initial configuration
     config_log[0] = config
     trajectory_log[0] = trajectory[0]
     
-    print(f"Simulating {N_points-1} control steps ...", end="", flush=True)
+    print(f"Simulating {N_points-1} control steps with joint limits enforcement ...", end="", flush=True)
     
     # Main control loop
     for i in range(N_points - 1):
@@ -262,16 +275,17 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         # Compute current end-effector pose
         X_actual = compute_current_ee_pose(config)
         
-        # Feedback control
-        V_cmd, controls_twist, X_err, integral_error = FeedbackControl(
-            X_actual, X_desired, X_desired_next, Kp, Ki, DT_CAPSTONE, integral_error, config
+        # Enhanced feedback control with joint limits enforcement
+        # This follows the document's recommendation to modify Jacobian columns for limited joints
+        V_cmd, controls, X_err, integral_error, joint_limits_info = FeedbackControlWithJointLimits(
+            X_actual, X_desired, X_desired_next, Kp, Ki, DT_CAPSTONE, 
+            integral_error, config, use_conservative_limits=True
         )
         
-        # Convert twist to wheel + joint rates using mobile manipulator Jacobian
-        Je = compute_jacobian(config)
-        controls_raw = np.linalg.pinv(Je, rcond=PINV_TOLERANCE) @ V_cmd
-        controls = np.clip(controls_raw, -SPEED_LIMIT, SPEED_LIMIT)
+        # Log joint limits information for analysis
+        joint_limits_log.append(joint_limits_info)
         
+        # Controls are already clipped in FeedbackControlWithJointLimits
         # Simulate robot motion
         config = NextState(config, controls, DT_CAPSTONE, SPEED_LIMIT)
         
@@ -281,6 +295,14 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         trajectory_log[i+1] = trajectory[i+1]
     
     print(" done")
+    
+    # Analyze joint limits enforcement
+    total_violations = sum(1 for info in joint_limits_log if info['limits_enforced'])
+    jacobian_modifications = sum(1 for info in joint_limits_log if info['jacobian_modified'])
+    
+    print(f"Joint limits analysis:")
+    print(f"  - Time steps with limit violations: {total_violations}/{len(joint_limits_log)} ({100*total_violations/len(joint_limits_log):.1f}%)")
+    print(f"  - Jacobian modifications applied: {jacobian_modifications}")
     
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
@@ -391,9 +413,59 @@ def plot_error_results(error_log, output_dir="results/best"):
         print("Matplotlib not available - error plot not generated")
 
 
+def demonstrate_singularity_handling():
+    """Demonstrate the difference between default and toleranced pseudoinverse.
+    
+    This function shows how the PINV_TOLERANCE parameter helps with near-singular
+    Jacobians, following the document's MATLAB example.
+    """
+    print("\n=== Singularity Handling Demonstration ===")
+    
+    # Create a test configuration near singularity (joints 3&4 close to zero)
+    config_singular = np.array([0, 0, 0, 0, 0, 0.01, -0.01, 0, 0, 0, 0, 0])  # Near-singular
+    config_safe = np.array([0, 0, 0, 0, 0, -0.3, -1.6, 0, 0, 0, 0, 0])      # Safe configuration
+    
+    # Test twist command
+    V_test = np.array([0, 0, 0, 0.1, 0, 0])  # Small linear motion in x
+    
+    print("Testing near-singular vs safe configurations:")
+    
+    for name, config in [("Near-singular", config_singular), ("Safe", config_safe)]:
+        Je = compute_jacobian(config)
+        
+        # Compute singular values to show conditioning
+        U, s, Vt = np.linalg.svd(Je)
+        condition_number = s[0] / s[-1] if s[-1] > 1e-12 else np.inf
+        
+        # Standard pseudoinverse (no tolerance)
+        try:
+            Je_pinv_std = np.linalg.pinv(Je)
+            controls_std = Je_pinv_std @ V_test
+            max_control_std = np.max(np.abs(controls_std))
+        except:
+            max_control_std = np.inf
+        
+        # Toleranced pseudoinverse (as used in our implementation)
+        Je_pinv_tol = np.linalg.pinv(Je, rcond=PINV_TOLERANCE)
+        controls_tol = Je_pinv_tol @ V_test
+        max_control_tol = np.max(np.abs(controls_tol))
+        
+        print(f"\n{name} configuration:")
+        print(f"  Joints 3&4: [{config[5]:.3f}, {config[6]:.3f}] rad")
+        print(f"  Condition number: {condition_number:.2e}")
+        print(f"  Smallest singular value: {s[-1]:.2e}")
+        print(f"  Max control (no tolerance): {max_control_std:.3f}")
+        print(f"  Max control (tolerance={PINV_TOLERANCE}): {max_control_tol:.3f}")
+        print(f"  Improvement factor: {max_control_std/max_control_tol:.1f}x")
+
+
 def main():
     """Main function for capstone simulation."""
     print("=== Modern Robotics Capstone Project - Final Integration ===")
+    print()
+    
+    # Demonstrate singularity handling
+    demonstrate_singularity_handling()
     print()
     
     # Create default poses
@@ -414,6 +486,12 @@ def main():
         print(f"Total time steps: {len(config_log)}")
         print(f"Final position error: {np.linalg.norm(error_log[-1, 3:6]):.4f} m")
         print(f"Final orientation error: {np.linalg.norm(error_log[-1, :3]):.4f} rad")
+        print()
+        print("Enhanced features implemented:")
+        print("  ✓ Pseudoinverse tolerance for singularity robustness")
+        print("  ✓ Conservative joint limits to avoid singularities") 
+        print("  ✓ Jacobian column zeroing for joint limit enforcement")
+        print("  ✓ Initial configuration validation")
         print()
         print("Files generated in results/best/:")
         print("  - youBot_output.csv")
