@@ -43,7 +43,7 @@ from code.feedback_control import (
     FeedbackControlWithJointLimits, JOINT_LIMITS_MIN, JOINT_LIMITS_MAX
 )
 from code.run_capstone import (
-    compute_current_ee_pose, run_capstone_simulation, 
+    compute_current_ee_pose, run_capstone_simulation, run_perfect_feedforward_simulation,
     create_default_cube_poses, create_grasp_transforms,
     create_initial_config_with_error
 )
@@ -640,31 +640,32 @@ def test_complete_milestone_integration():
 # =============================================================================
 
 def test_feedforward_only_perfect_initial():
-    """Test feedforward control with perfect initial configuration using run_capstone.py."""
-    print("Testing feedforward control with perfect initial configuration...")
+    """Test feedforward control with truly perfect initial configuration.
+    
+    Uses revised approach:
+    1. Set initial robot configuration first
+    2. Compute actual end-effector pose via forward kinematics
+    3. Generate trajectory starting from actual pose
+    
+    This eliminates initial pose mismatch for true feedforward testing.
+    """
+    print("Testing feedforward control with truly perfect initial configuration...")
     
     # Get default poses
     Tsc_init, Tsc_goal = create_default_cube_poses()
     Tce_grasp, Tce_standoff = create_grasp_transforms()
     
-    # Test feedforward only (zero gains)
-    feedforward_gains = {
-        'Kp': np.zeros((6, 6)),
-        'Ki': np.zeros((6, 6))
-    }
+    print("  Note: Using revised approach - config first, then trajectory generation")
     
-    print("  Note: Using perfect initial configuration (minimal error) for true feedforward test")
-    
-    # Run capstone simulation with feedforward only and perfect initial config
+    # Run perfect feedforward simulation
     output_dir = "milestone3_feedforward_tests/perfect_initial_test"
     try:
-        config_log, error_log, success = run_capstone_simulation(
+        config_log, error_log, success = run_perfect_feedforward_simulation(
             Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
-            Kp=feedforward_gains['Kp'], Ki=feedforward_gains['Ki'],
-            output_dir=output_dir, use_perfect_initial=True
+            output_dir=output_dir
         )
         
-        assert success, "Feedforward simulation should complete successfully"
+        assert success, "Perfect feedforward simulation should complete successfully"
         assert len(config_log) > 100, "Should generate sufficient trajectory points"
         
         # Validate that the output file is in correct format
@@ -678,10 +679,14 @@ def test_feedforward_only_perfect_initial():
         print(f"  Generated trajectory: {len(config_log)} timesteps")
         print(f"  Final position error: {np.linalg.norm(error_log[-1, 3:6]):.6f} m")
         print(f"  Final orientation error: {np.linalg.norm(error_log[-1, :3]):.6f} rad")
-        print(f"  Perfect initial config: no intentional displacement")
+        print(f"  Perfect initial approach: trajectory generated from actual robot pose")
+        
+        # Copy to standard feedforward test location for compatibility
+        standard_csv = "milestone3_feedforward_tests/feedforward_perfect_initial.csv"
+        save_robot_config_csv(data, standard_csv)
         
     except Exception as e:
-        print(f"  Error in feedforward test: {e}")
+        print(f"  Error in perfect feedforward test: {e}")
         # Fall back to simple trajectory for basic validation
         trajectory = create_simple_trajectory()
         csv_filename = "milestone3_feedforward_tests/feedforward_perfect_initial.csv"
