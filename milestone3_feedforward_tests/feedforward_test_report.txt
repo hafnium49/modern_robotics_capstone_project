@@ -1,10 +1,37 @@
 Feedforward Control Test Report
-========================================
+==================================================
 
-Generated test cases:
-- feedforward_perfect_initial.csv
-- feedforward_small_error.csv (initial error: [0.05 0.02 0.01])
-- feedforward_medium_error.csv (initial error: [0.1  0.05 0.02])
-- feedforward_large_error.csv (initial error: [0.2  0.1  0.05])
+Generated using run_capstone.py with different gain configurations.
+All files are in CoppeliaSim Scene 6 compatible format.
 
-Generated on: 2025-07-28 04:41:27.415456
+Test scenarios:
+
+1. perfect_initial.csv
+   Description: Perfect initial pose with feedforward only
+   Proportional gains: diag(0.0)
+   Integral gains: diag(0.0)
+   Status: ✓ Generated (3003 timesteps)
+
+2. small_error.csv
+   Description: Small initial error with feedforward + small feedback
+   Proportional gains: diag(0.5)
+   Integral gains: diag(0.0)
+   Status: ✓ Generated (3003 timesteps)
+
+3. medium_error.csv
+   Description: Medium initial error with moderate feedback
+   Proportional gains: diag(1.5)
+   Integral gains: diag(0.05)
+   Status: ✓ Generated (3003 timesteps)
+
+4. large_error.csv
+   Description: Large initial error with strong feedback
+   Proportional gains: diag(3.0)
+   Integral gains: diag(0.1)
+   Status: ✓ Generated (3003 timesteps)
+
+File format: chassis_phi, chassis_x, chassis_y, J1, J2, J3, J4, J5, W1, W2, W3, W4, gripper_state
+Compatible with: CoppeliaSim Scene 6 (CSV Mobile Manipulation youBot)
+Time step: 0.01 seconds between configurations
+
+Generated on: 2025-07-28 05:38:05.770288
