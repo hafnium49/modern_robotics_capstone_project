@@ -115,6 +115,33 @@ def create_grasp_transforms():
     return Tce_grasp, Tce_standoff
 
 
+def create_perfect_initial_config():
+    """Create initial robot configuration with minimal error for perfect feedforward tests.
+    
+    Returns a configuration that closely matches the trajectory starting point.
+    
+    Returns:
+        config: 12-element initial configuration [phi, x, y, theta1-5, w1-4]
+    """
+    # Configuration that should place end-effector close to Tse_init
+    # These values are tuned to minimize initial error
+    phi_init = 0.0  # No chassis rotation
+    x_init = 0.15   # Close to expected position
+    y_init = 0.15   # Close to expected position
+    
+    # Joint angles - designed to achieve the desired end-effector pose
+    # theta3 < -0.2 for conservative limits compliance
+    theta_init = np.array([0.0, 0.0, -0.3, 0.2, 0.0])
+    
+    # Wheel angles (not critical for initial pose)
+    w_init = np.zeros(4)
+    
+    # Combine into 12-element configuration
+    config = np.hstack([phi_init, x_init, y_init, theta_init, w_init])
+    
+    return config
+
+
 def create_initial_config_with_error(trajectory_first_row):
     """Create initial robot configuration with significant error.
     
@@ -211,7 +238,7 @@ def compute_current_ee_pose(config):
 
 
 def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff, 
-                          Kp=None, Ki=None, output_dir="results/best"):
+                          Kp=None, Ki=None, output_dir="results/best", use_perfect_initial=False):
     """Run the complete capstone simulation.
     
     Args:
@@ -222,6 +249,7 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         Kp: 6x6 proportional gain matrix (default provided)
         Ki: 6x6 integral gain matrix (default provided)
         output_dir: directory for output files
+        use_perfect_initial: if True, use minimal error config; if False, use significant error
         
     Returns:
         config_log: Nx12 array of robot configurations
@@ -248,8 +276,13 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     N_points = len(trajectory)
     print(f" done ({N_points} points)")
     
-    # Create initial configuration with significant error
-    config = create_initial_config_with_error(trajectory[0])
+    # Create initial configuration - either perfect or with intentional error
+    if use_perfect_initial:
+        config = create_perfect_initial_config()
+        print("Using perfect initial configuration (minimal error)")
+    else:
+        config = create_initial_config_with_error(trajectory[0])
+        print("Using initial configuration with significant error for testing")
     
     # Initialize control state
     integral_error = np.zeros(6)

@@ -653,13 +653,15 @@ def test_feedforward_only_perfect_initial():
         'Ki': np.zeros((6, 6))
     }
     
-    # Run capstone simulation with feedforward only
+    print("  Note: Using perfect initial configuration (minimal error) for true feedforward test")
+    
+    # Run capstone simulation with feedforward only and perfect initial config
     output_dir = "milestone3_feedforward_tests/perfect_initial_test"
     try:
         config_log, error_log, success = run_capstone_simulation(
             Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
             Kp=feedforward_gains['Kp'], Ki=feedforward_gains['Ki'],
-            output_dir=output_dir
+            output_dir=output_dir, use_perfect_initial=True
         )
         
         assert success, "Feedforward simulation should complete successfully"
@@ -676,6 +678,7 @@ def test_feedforward_only_perfect_initial():
         print(f"  Generated trajectory: {len(config_log)} timesteps")
         print(f"  Final position error: {np.linalg.norm(error_log[-1, 3:6]):.6f} m")
         print(f"  Final orientation error: {np.linalg.norm(error_log[-1, :3]):.6f} rad")
+        print(f"  Perfect initial config: no intentional displacement")
         
     except Exception as e:
         print(f"  Error in feedforward test: {e}")
