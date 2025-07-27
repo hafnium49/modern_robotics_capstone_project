@@ -237,6 +237,135 @@ def compute_current_ee_pose(config):
     return Tse
 
 
+def run_capstone_simulation_with_perfect_trajectory(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
+                                                  initial_config=None, Kp=None, Ki=None, 
+                                                  output_dir="results/perfect"):
+    """Run capstone simulation with trajectory generated from actual robot initial pose.
+    
+    This approach ensures perfect initial matching between robot and trajectory:
+    1. Set initial robot configuration
+    2. Compute actual end-effector pose via forward kinematics
+    3. Generate trajectory starting from actual pose
+    
+    Args:
+        Tsc_init: 4x4 SE(3) - initial cube pose
+        Tsc_goal: 4x4 SE(3) - goal cube pose  
+        Tce_grasp: 4x4 SE(3) - grasp transform
+        Tce_standoff: 4x4 SE(3) - standoff transform
+        initial_config: 12-element robot config (if None, uses perfect config)
+        Kp: 6x6 proportional gain matrix (default provided)
+        Ki: 6x6 integral gain matrix (default provided)
+        output_dir: directory for output files
+        
+    Returns:
+        config_log: Nx12 array of robot configurations
+        error_log: Nx6 array of pose errors
+        success: boolean indicating if simulation completed
+    """
+    
+    # Default gains
+    if Kp is None:
+        Kp = np.diag([3, 3, 3, 3, 3, 3])
+    if Ki is None:
+        Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+    
+    # Step 1: Set initial robot configuration
+    if initial_config is None:
+        config = create_perfect_initial_config()
+        print("Using default perfect initial configuration")
+    else:
+        config = initial_config.copy()
+        print("Using provided initial configuration")
+    
+    # Step 2: Compute actual end-effector pose via forward kinematics
+    Tse_actual = compute_current_ee_pose(config)
+    print(f"Computed actual initial end-effector pose from robot configuration")
+    
+    # Step 3: Generate trajectory starting from actual pose
+    print("Generating trajectory from actual robot pose ...", end="", flush=True)
+    trajectory = TrajectoryGenerator(
+        Tse_actual, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
+        k=1, method="quintic"
+    )
+    
+    N_points = len(trajectory)
+    print(f" done ({N_points} points)")
+    print("✓ Perfect initial matching: trajectory starts exactly where robot is")
+    
+    # Initialize control state
+    integral_error = np.zeros(6)
+    
+    # Storage for logging
+    config_log = np.zeros((N_points, 12))
+    error_log = np.zeros((N_points-1, 6))
+    trajectory_log = np.zeros((N_points, 13))
+    joint_limits_log = []
+    
+    # Log initial configuration
+    config_log[0] = config
+    trajectory_log[0] = trajectory[0]
+    
+    print(f"Simulating {N_points-1} control steps with joint limits enforcement ...", end="", flush=True)
+    
+    # Main control loop
+    for i in range(N_points - 1):
+        # Extract desired poses
+        X_desired = extract_pose_from_trajectory_row(trajectory[i])
+        X_desired_next = extract_pose_from_trajectory_row(trajectory[i+1])
+        
+        # Compute current end-effector pose
+        X_actual = compute_current_ee_pose(config)
+        
+        # Enhanced feedback control with joint limits enforcement
+        V_cmd, controls, X_err, integral_error, joint_limits_info = FeedbackControlWithJointLimits(
+            X_actual, X_desired, X_desired_next, Kp, Ki, DT_CAPSTONE, 
+            integral_error, config, use_conservative_limits=True
+        )
+        
+        # Log joint limits information
+        joint_limits_log.append(joint_limits_info)
+        
+        # Simulate robot motion
+        config = NextState(config, controls, DT_CAPSTONE, SPEED_LIMIT)
+        
+        # Log data
+        config_log[i+1] = config
+        error_log[i] = X_err
+        trajectory_log[i+1] = trajectory[i+1]
+    
+    print(" done")
+    
+    # Analyze joint limits enforcement
+    total_violations = sum(1 for info in joint_limits_log if info['limits_enforced'])
+    jacobian_modifications = sum(1 for info in joint_limits_log if info['jacobian_modified'])
+    
+    print(f"Joint limits analysis:")
+    print(f"  - Time steps with limit violations: {total_violations}/{len(joint_limits_log)} ({100*total_violations/len(joint_limits_log):.1f}%)")
+    print(f"  - Jacobian modifications applied: {jacobian_modifications}")
+    
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Write robot configuration CSV
+    youbot_output_path = os.path.join(output_dir, "youBot_output.csv")
+    youbot_data = np.zeros((N_points, 13))
+    youbot_data[:, :12] = config_log
+    youbot_data[:, 12] = trajectory_log[:, 12]  # gripper states
+    
+    np.savetxt(youbot_output_path, youbot_data, delimiter=',', fmt='%.6f')
+    print(f"Scene 6 compatible CSV written to {youbot_output_path}")
+    
+    # Verify Scene 6 compatibility
+    verify_scene6_compatibility(youbot_output_path)
+    
+    # Write error log CSV
+    error_output_path = os.path.join(output_dir, "Xerr_log.csv")
+    np.savetxt(error_output_path, error_log, delimiter=',', fmt='%.6f')
+    print(f"Error log written to {error_output_path}")
+
+    return config_log, error_log, True
+
+
 def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff, 
                           Kp=None, Ki=None, output_dir="results/best", use_perfect_initial=False):
     """Run the complete capstone simulation.
