@@ -1632,6 +1632,92 @@ def run_comprehensive_feedforward_tests():
 
 
 # =============================================================================
+# Perfect Feedforward Demonstration Functions
+# =============================================================================
+
+def create_perfect_initial_config():
+    """Create initial robot configuration for perfect feedforward tests."""
+    phi_init = 0.0  # No chassis rotation
+    x_init = 0.15   # Close to expected position
+    y_init = 0.15   # Close to expected position
+    
+    # Joint angles - designed to achieve the desired end-effector pose
+    theta_init = np.array([0.0, 0.0, -0.3, 0.2, 0.0])
+    
+    # Wheel angles
+    w_init = np.zeros(4)
+    
+    # Combine into 12-element configuration
+    config = np.hstack([phi_init, x_init, y_init, theta_init, w_init])
+    return config
+
+
+def create_initial_ee_pose():
+    """Create initial end-effector pose according to Final Step specifications."""
+    Tse_init = np.array([
+        [0,  0,  1, 0],
+        [0,  1,  0, 0],
+        [-1, 0,  0, 0.5],
+        [0,  0,  0, 1]
+    ])
+    return Tse_init
+
+
+def test_perfect_feedforward_concept():
+    """
+    Test that demonstrates the perfect feedforward concept and explains
+    why feedforward-only control can have large final errors.
+    
+    This test shows the mismatch between a fixed initial end-effector pose
+    and the actual pose achieved by a 'perfect' robot configuration.
+    """
+    print("\n=== Perfect Feedforward Concept Demonstration ===")
+    
+    # Step 1: Show the original approach (trajectory first, config second)
+    print("ORIGINAL APPROACH:")
+    print("1. Fixed initial end-effector pose (from specification):")
+    Tse_spec = create_initial_ee_pose()
+    print(f"   Position: {Tse_spec[:3, 3]}")
+    print(f"   Rotation diagonal: [{Tse_spec[0,0]:.3f}, {Tse_spec[1,1]:.3f}, {Tse_spec[2,2]:.3f}]")
+    
+    print("\n2. 'Perfect' initial robot configuration:")
+    config_perfect = create_perfect_initial_config()
+    print(f"   Chassis: phi={config_perfect[0]:.3f}, x={config_perfect[1]:.3f}, y={config_perfect[2]:.3f}")
+    print(f"   Joints: {config_perfect[3:8]}")
+    
+    print("\n3. Actual end-effector pose achieved by robot:")
+    Tse_actual = compute_current_ee_pose(config_perfect)
+    print(f"   Position: {Tse_actual[:3, 3]}")
+    print(f"   Rotation diagonal: [{Tse_actual[0,0]:.3f}, {Tse_actual[1,1]:.3f}, {Tse_actual[2,2]:.3f}]")
+    
+    print("\n4. MISMATCH ANALYSIS:")
+    position_error = np.linalg.norm(Tse_spec[:3, 3] - Tse_actual[:3, 3])
+    rotation_error = np.linalg.norm(mr.MatrixLog3(Tse_spec[:3, :3] @ Tse_actual[:3, :3].T))
+    print(f"   Position error: {position_error:.6f} m")
+    print(f"   Rotation error: {rotation_error:.6f} rad") 
+    print(f"   This mismatch explains why feedforward-only control has large final errors!")
+    
+    print("\n" + "="*60)
+    print("REVISED APPROACH:")
+    print("1. Set robot configuration first")
+    print("2. Compute ACTUAL end-effector pose via forward kinematics")
+    print("3. Generate trajectory starting from ACTUAL pose")
+    print()
+    print("Benefits:")
+    print("   ✓ Perfect initial match (zero trajectory error at t=0)")
+    print("   ✓ Feedforward control starts from correct state")
+    print("   ✓ Much better final accuracy expected")
+    print()
+    print("This is exactly what the revised feedforward implementation accomplishes!")
+    
+    # Assert that there is indeed a mismatch (this validates the concept)
+    assert position_error > 0.01, "Expected significant position error in original approach"
+    assert rotation_error > 0.01, "Expected significant rotation error in original approach"
+    
+    print("\n✅ Perfect feedforward concept demonstration completed successfully!")
+
+
+# =============================================================================
 # MAIN TEST EXECUTION
 # =============================================================================
 
@@ -1663,6 +1749,9 @@ def run_all_tests():
         test_feedforward_only_mode,  # Replaced test_feedforward_only_perfect_initial
         test_feedforward_with_initial_error,
         test_feedforward_trajectory_following,
+        
+        # Perfect feedforward concept demonstration
+        test_perfect_feedforward_concept,
         
         # Analysis tests
         test_generate_feedforward_csv_files,
