@@ -43,7 +43,7 @@ from code.feedback_control import (
     FeedbackControlWithJointLimits, JOINT_LIMITS_MIN, JOINT_LIMITS_MAX
 )
 from code.run_capstone import (
-    compute_current_ee_pose, run_capstone_simulation, run_perfect_feedforward_simulation,
+    compute_current_ee_pose, run_capstone_simulation,
     create_default_cube_poses, create_grasp_transforms,
     create_initial_config_with_error
 )
@@ -660,9 +660,9 @@ def test_feedforward_only_perfect_initial():
     # Run perfect feedforward simulation
     output_dir = "milestone3_feedforward_tests/perfect_initial_test"
     try:
-        config_log, error_log, success = run_perfect_feedforward_simulation(
+        config_log, error_log, success = run_capstone_simulation(
             Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
-            output_dir=output_dir
+            output_dir=output_dir, feedforward_only=True
         )
         
         assert success, "Perfect feedforward simulation should complete successfully"
@@ -683,7 +683,9 @@ def test_feedforward_only_perfect_initial():
         
         # Copy to standard feedforward test location for compatibility
         standard_csv = "milestone3_feedforward_tests/feedforward_perfect_initial.csv"
-        save_robot_config_csv(data, standard_csv)
+        # Use shutil.copy since we already have the properly formatted CSV file
+        import shutil
+        shutil.copy(csv_filename, standard_csv)
         
     except Exception as e:
         print(f"  Error in perfect feedforward test: {e}")
