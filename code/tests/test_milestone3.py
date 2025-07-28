@@ -35,7 +35,7 @@ except ImportError:
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-# Import project modules
+# Import project modules - try direct imports first (when running from code/tests)
 try:
     from next_state import NextState
     from feedback_control import (
@@ -50,21 +50,29 @@ try:
         create_initial_config_with_error, run_perfect_feedforward_simulation
     )
     from trajectory_generator import TrajectoryGenerator
-except ImportError:
-    # Fallback to code.module imports
-    from code.next_state import NextState
-    from code.feedback_control import (
-        FeedbackControl, FeedbackController, chassis_to_se3, get_F6, compute_jacobian,
-        R, L, W, DT, SPEED_LIMIT, PINV_TOLERANCE, TB0, M0E, BLIST,
-        checkJointLimits, enforceJointLimits, modifyJacobianForLimits,
-        FeedbackControlWithJointLimits, JOINT_LIMITS_MIN, JOINT_LIMITS_MAX
-    )
-    from code.run_capstone import (
-        compute_current_ee_pose, run_capstone_simulation,
-        create_default_cube_poses, create_grasp_transforms,
-        create_initial_config_with_error, run_perfect_feedforward_simulation
-    )
-    from code.trajectory_generator import TrajectoryGenerator
+    print("✓ Direct imports successful")
+except ImportError as e:
+    print(f"Direct imports failed: {e}")
+    print("Trying code.module imports...")
+    # Fallback to code.module imports (when running from project root)
+    try:
+        from code.next_state import NextState
+        from code.feedback_control import (
+            FeedbackControl, FeedbackController, chassis_to_se3, get_F6, compute_jacobian,
+            R, L, W, DT, SPEED_LIMIT, PINV_TOLERANCE, TB0, M0E, BLIST,
+            checkJointLimits, enforceJointLimits, modifyJacobianForLimits,
+            FeedbackControlWithJointLimits, JOINT_LIMITS_MIN, JOINT_LIMITS_MAX
+        )
+        from code.run_capstone import (
+            compute_current_ee_pose, run_capstone_simulation,
+            create_default_cube_poses, create_grasp_transforms,
+            create_initial_config_with_error, run_perfect_feedforward_simulation
+        )
+        from code.trajectory_generator import TrajectoryGenerator
+        print("✓ code.module imports successful")
+    except ImportError as e2:
+        print(f"Both import methods failed: {e2}")
+        raise
 
 
 # =============================================================================

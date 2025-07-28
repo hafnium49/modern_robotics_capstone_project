@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Import project modules - try direct imports first (when running from code/tests)
 try:
     from run_capstone import (
         create_default_cube_poses,
@@ -39,24 +40,32 @@ try:
     from trajectory_generator import TrajectoryGenerator
     from feedback_control import FeedbackControl, compute_jacobian
     from next_state import NextState
-except ImportError:
-    # Fallback to code.module imports
-    from code.run_capstone import (
-        create_default_cube_poses,
-        create_grasp_transforms, 
-        create_initial_ee_pose,
-        create_initial_config_with_error,
-        extract_pose_from_trajectory_row,
-        compute_current_ee_pose,
-        run_capstone_simulation,
-        plot_error_results,
-        DT_CAPSTONE,
-        SPEED_LIMIT,
-        run_perfect_feedforward_simulation
-    )
-    from code.trajectory_generator import TrajectoryGenerator
-    from code.feedback_control import FeedbackControl, compute_jacobian
-    from code.next_state import NextState
+    print("✓ Direct imports successful")
+except ImportError as e:
+    print(f"Direct imports failed: {e}")
+    print("Trying code.module imports...")
+    # Fallback to code.module imports (when running from project root)
+    try:
+        from code.run_capstone import (
+            create_default_cube_poses,
+            create_grasp_transforms, 
+            create_initial_ee_pose,
+            create_initial_config_with_error,
+            extract_pose_from_trajectory_row,
+            compute_current_ee_pose,
+            run_capstone_simulation,
+            plot_error_results,
+            DT_CAPSTONE,
+            SPEED_LIMIT,
+            run_perfect_feedforward_simulation
+        )
+        from code.trajectory_generator import TrajectoryGenerator
+        from code.feedback_control import FeedbackControl, compute_jacobian
+        from code.next_state import NextState
+        print("✓ code.module imports successful")
+    except ImportError as e2:
+        print(f"Both import methods failed: {e2}")
+        raise
 
 import modern_robotics as mr
 
