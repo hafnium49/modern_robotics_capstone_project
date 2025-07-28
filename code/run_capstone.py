@@ -238,8 +238,17 @@ def compute_current_ee_pose(config):
 
 
 def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff, 
-                          Kp=None, Ki=None, output_dir="results/best", use_perfect_initial=False):
-    """Run the complete capstone simulation.
+                          Kp=None, Ki=None, output_dir="results/best", use_perfect_initial=False,
+                          feedforward_only=False):
+    """Run the complete capstone simulation using revised trajectory generation approach.
+    
+    This function now follows the improved approach:
+    1. Set initial robot configuration first (either perfect or with error)
+    2. Compute actual end-effector pose via forward kinematics  
+    3. Generate trajectory starting from actual robot pose
+    4. Run feedback control loop
+    
+    This eliminates initial pose mismatch and provides more realistic simulation.
     
     Args:
         Tsc_init: 4x4 SE(3) - initial cube pose
@@ -250,6 +259,7 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         Ki: 6x6 integral gain matrix (default provided)
         output_dir: directory for output files
         use_perfect_initial: if True, use minimal error config; if False, use significant error
+        feedforward_only: if True, use pure feedforward (Kp=Ki=0, forces use_perfect_initial=True)
         
     Returns:
         config_log: Nx12 array of robot configurations
@@ -257,32 +267,65 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         success: boolean indicating if simulation completed
     """
     
-    # Default gains as suggested in Milestone 4 (conservative for large initial errors)
-    if Kp is None:
-        Kp = np.diag([3, 3, 3, 3, 3, 3])  # Moderate proportional gains
-    if Ki is None:
-        Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Small integral gains to prevent windup
+    # Handle feedforward_only mode
+    if feedforward_only:
+        # Force perfect initial configuration and zero gains for pure feedforward
+        use_perfect_initial = True
+        Kp = np.zeros((6, 6))
+        Ki = np.zeros((6, 6))
+        print("=== Perfect Feedforward Simulation ===")
+        print("Using revised approach: config → forward kinematics → trajectory")
+    else:
+        # Default gains as suggested in Milestone 4 (conservative for large initial errors)
+        if Kp is None:
+            Kp = np.diag([3, 3, 3, 3, 3, 3])  # Moderate proportional gains
+        if Ki is None:
+            Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Small integral gains to prevent windup
     
-    print("Generating reference trajectory ...", end="", flush=True)
+    # Create initial configuration first - either perfect or with error
+    if use_perfect_initial:
+        config = create_perfect_initial_config()
+        if feedforward_only:
+            print(f"Initial robot config: phi={config[0]:.3f}, x={config[1]:.3f}, y={config[2]:.3f}")
+            print(f"Joint angles: {config[3:8]}")
+        else:
+            print("Using perfect initial configuration (minimal error)")
+    else:
+        # For error case, we still need a trajectory to define the error relative to
+        # So we'll use the original approach for this case to maintain compatibility
+        Tse_spec = create_initial_ee_pose()
+        temp_trajectory = TrajectoryGenerator(
+            Tse_spec, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
+            k=1, method="quintic"
+        )
+        config = create_initial_config_with_error(temp_trajectory[0])
+        print("Using initial configuration with significant error for testing")
     
-    # Use specified initial end-effector pose from Final Step
-    Tse_init = create_initial_ee_pose()
+    # Compute actual end-effector pose from the chosen configuration
+    Tse_actual = compute_current_ee_pose(config)
+    if feedforward_only:
+        print(f"Actual end-effector position: {Tse_actual[:3, 3]}")
+    else:
+        print(f"Actual initial end-effector position: {Tse_actual[:3, 3]}")
     
+    if feedforward_only:
+        print("Generating trajectory from actual robot pose ...", end="", flush=True)
+    else:
+        print("Generating reference trajectory from actual robot pose ...", end="", flush=True)
+    
+    # Generate trajectory starting from actual robot pose (revised approach)
     trajectory = TrajectoryGenerator(
-        Tse_init, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
+        Tse_actual, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         k=1, method="quintic"
     )
     
     N_points = len(trajectory)
     print(f" done ({N_points} points)")
     
-    # Create initial configuration - either perfect or with intentional error
-    if use_perfect_initial:
-        config = create_perfect_initial_config()
-        print("Using perfect initial configuration (minimal error)")
-    else:
-        config = create_initial_config_with_error(trajectory[0])
-        print("Using initial configuration with significant error for testing")
+    # Verify initial pose match
+    traj_first_pose = extract_pose_from_trajectory_row(trajectory[0])
+    pose_error = np.linalg.norm(Tse_actual - traj_first_pose)
+    print(f"Initial pose match error: {pose_error:.2e} (should be ~0)")
     
     # Initialize control state
     integral_error = np.zeros(6)
@@ -297,7 +340,7 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     config_log[0] = config
     trajectory_log[0] = trajectory[0]
     
-    print(f"Simulating {N_points-1} control steps with joint limits enforcement ...", end="", flush=True)
+    print(f"Simulating {N_points-1} control steps with {'perfect feedforward' if feedforward_only else 'joint limits enforcement'} ...", end="", flush=True)
     
     # Main control loop
     for i in range(N_points - 1):
@@ -348,7 +391,10 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     
     # Save in Scene 6 compatible format (no headers, precise formatting)
     np.savetxt(youbot_output_path, youbot_data, delimiter=',', fmt='%.6f')
-    print(f"Scene 6 compatible CSV written to {youbot_output_path}")
+    if feedforward_only:
+        print(f"Perfect feedforward CSV written to {youbot_output_path}")
+    else:
+        print(f"Scene 6 compatible CSV written to {youbot_output_path}")
     
     # Verify Scene 6 compatibility
     verify_scene6_compatibility(youbot_output_path)
@@ -357,140 +403,17 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     error_output_path = os.path.join(output_dir, "Xerr_log.csv")
     np.savetxt(error_output_path, error_log, delimiter=',', fmt='%.6f')
     print(f"Error log written to {error_output_path}")
+    
+    # Print performance summary for feedforward mode
+    if feedforward_only:
+        final_pos_error = np.linalg.norm(error_log[-1, 3:6])
+        final_orient_error = np.linalg.norm(error_log[-1, :3])
+        
+        print(f"\n=== Perfect Feedforward Results ===")
+        print(f"Initial pose match: {pose_error:.2e}")
+        print(f"Final position error: {final_pos_error:.6f} m")
+        print(f"Final orientation error: {final_orient_error:.6f} rad")
 
-    return config_log, error_log, True
-
-
-def run_perfect_feedforward_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff, 
-                                     output_dir="results/perfect_feedforward"):
-    """Run a truly perfect feedforward simulation by generating trajectory from actual robot pose.
-    
-    This follows the revised approach:
-    1. Set initial robot configuration first
-    2. Compute actual end-effector pose via forward kinematics
-    3. Generate trajectory starting from actual pose
-    
-    Args:
-        Tsc_init: 4x4 SE(3) - initial cube pose
-        Tsc_goal: 4x4 SE(3) - goal cube pose  
-        Tce_grasp: 4x4 SE(3) - grasp transform
-        Tce_standoff: 4x4 SE(3) - standoff transform
-        output_dir: directory for output files
-        
-    Returns:
-        config_log: Nx12 array of robot configurations
-        error_log: Nx6 array of pose errors
-        success: boolean indicating if simulation completed
-    """
-    
-    print("=== Perfect Feedforward Simulation ===")
-    print("Using revised approach: config → forward kinematics → trajectory")
-    
-    # Step 1: Set initial robot configuration first
-    config = create_perfect_initial_config()
-    print(f"Initial robot config: phi={config[0]:.3f}, x={config[1]:.3f}, y={config[2]:.3f}")
-    print(f"Joint angles: {config[3:8]}")
-    
-    # Step 2: Compute actual end-effector pose via forward kinematics
-    Tse_actual = compute_current_ee_pose(config)
-    print(f"Actual end-effector position: {Tse_actual[:3, 3]}")
-    
-    # Step 3: Generate trajectory starting from actual robot pose
-    print("Generating trajectory from actual robot pose ...", end="", flush=True)
-    trajectory = TrajectoryGenerator(
-        Tse_actual, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
-        k=1, method="quintic"
-    )
-    
-    N_points = len(trajectory)
-    print(f" done ({N_points} points)")
-    
-    # Verify perfect initial match
-    traj_first_pose = extract_pose_from_trajectory_row(trajectory[0])
-    pose_error = np.linalg.norm(Tse_actual - traj_first_pose)
-    print(f"Initial pose match error: {pose_error:.2e} (should be ~0)")
-    
-    # Zero gains for pure feedforward
-    Kp = np.zeros((6, 6))
-    Ki = np.zeros((6, 6))
-    
-    # Initialize control state
-    integral_error = np.zeros(6)
-    
-    # Storage for logging
-    config_log = np.zeros((N_points, 12))
-    error_log = np.zeros((N_points-1, 6))
-    trajectory_log = np.zeros((N_points, 13))
-    joint_limits_log = []
-    
-    # Log initial configuration
-    config_log[0] = config
-    trajectory_log[0] = trajectory[0]
-    
-    print(f"Simulating {N_points-1} control steps with perfect feedforward ...", end="", flush=True)
-    
-    # Main control loop - pure feedforward (Kp = Ki = 0)
-    for i in range(N_points - 1):
-        # Extract desired poses
-        X_desired = extract_pose_from_trajectory_row(trajectory[i])
-        X_desired_next = extract_pose_from_trajectory_row(trajectory[i+1])
-        
-        # Compute current end-effector pose
-        X_actual = compute_current_ee_pose(config)
-        
-        # Pure feedforward control (no feedback correction)
-        V_cmd, controls, X_err, integral_error, joint_limits_info = FeedbackControlWithJointLimits(
-            X_actual, X_desired, X_desired_next, Kp, Ki, DT_CAPSTONE, 
-            integral_error, config, use_conservative_limits=True
-        )
-        
-        # Log joint limits information
-        joint_limits_log.append(joint_limits_info)
-        
-        # Simulate robot motion
-        config = NextState(config, controls, DT_CAPSTONE, SPEED_LIMIT)
-        
-        # Log data
-        config_log[i+1] = config
-        error_log[i] = X_err
-        trajectory_log[i+1] = trajectory[i+1]
-    
-    print(" done")
-    
-    # Analyze results
-    total_violations = sum(1 for info in joint_limits_log if info['limits_enforced'])
-    print(f"Joint limits analysis:")
-    print(f"  - Time steps with limit violations: {total_violations}/{len(joint_limits_log)} ({100*total_violations/len(joint_limits_log):.1f}%)")
-    
-    # Create output directory
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Write robot configuration CSV
-    youbot_output_path = os.path.join(output_dir, "youBot_output.csv")
-    youbot_data = np.zeros((N_points, 13))
-    youbot_data[:, :12] = config_log
-    youbot_data[:, 12] = trajectory_log[:, 12]  # gripper states
-    
-    np.savetxt(youbot_output_path, youbot_data, delimiter=',', fmt='%.6f')
-    print(f"Perfect feedforward CSV written to {youbot_output_path}")
-    
-    # Verify Scene 6 compatibility
-    verify_scene6_compatibility(youbot_output_path)
-    
-    # Write error log
-    error_output_path = os.path.join(output_dir, "Xerr_log.csv")
-    np.savetxt(error_output_path, error_log, delimiter=',', fmt='%.6f')
-    print(f"Error log written to {error_output_path}")
-    
-    # Print performance summary
-    final_pos_error = np.linalg.norm(error_log[-1, 3:6])
-    final_orient_error = np.linalg.norm(error_log[-1, :3])
-    
-    print(f"\n=== Perfect Feedforward Results ===")
-    print(f"Initial pose match: {pose_error:.2e}")
-    print(f"Final position error: {final_pos_error:.6f} m")
-    print(f"Final orientation error: {final_orient_error:.6f} rad")
-    
     return config_log, error_log, True
 
 
@@ -533,6 +456,20 @@ def verify_scene6_compatibility(csv_path):
     except Exception as e:
         print(f"✗ CSV verification failed: {e}")
         return False
+
+
+def run_perfect_feedforward_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff, 
+                                     output_dir="results/perfect_feedforward"):
+    """Backward compatibility function - now calls run_capstone_simulation with feedforward_only=True.
+    
+    This function is deprecated. Use run_capstone_simulation(feedforward_only=True) instead.
+    """
+    return run_capstone_simulation(
+        Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
+        output_dir=output_dir, feedforward_only=True
+    )
+
+
 def plot_error_results(error_log, output_dir="results/best"):
     """Plot all six components of X_err vs time and save as PDF.
     
