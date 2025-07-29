@@ -142,22 +142,18 @@ def create_perfect_initial_config():
     return config
 
 
-def create_initial_config_with_error(trajectory_first_row):
+def create_initial_config_with_error():
     """Create initial robot configuration with significant error.
     
     Must have ≥0.20 m position error AND ≥30 deg orientation error
-    from the first row of the reference trajectory.
+    from the specification end-effector pose.
     
-    Args:
-        trajectory_first_row: 13-element array from trajectory
-        
     Returns:
         config: 12-element initial configuration [phi, x, y, theta1-5, w1-4]
     """
-    # Extract desired end-effector pose from first trajectory row
-    # Format: [r11,r12,r13,r21,r22,r23,r31,r32,r33,px,py,pz,grip]
-    R_desired = trajectory_first_row[:9].reshape(3, 3)
-    p_desired = trajectory_first_row[9:12]
+    # Use the specification pose directly - this is what the error is relative to
+    Tse_spec = create_initial_ee_pose()
+    p_desired = Tse_spec[:3, 3]
     
     # Create initial configuration with significant but manageable errors
     phi_init = np.radians(35)  # 35° chassis rotation (>30° requirement)
@@ -290,14 +286,8 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         else:
             print("Using perfect initial configuration (minimal error)")
     else:
-        # For error case, we still need a trajectory to define the error relative to
-        # So we'll use the original approach for this case to maintain compatibility
-        Tse_spec = create_initial_ee_pose()
-        temp_trajectory = TrajectoryGenerator(
-            Tse_spec, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
-            k=1, method="quintic"
-        )
-        config = create_initial_config_with_error(temp_trajectory[0])
+        # Use simplified approach - no temporary trajectory needed
+        config = create_initial_config_with_error()
         print("Using initial configuration with significant error for testing")
     
     # Compute actual end-effector pose from the chosen configuration
