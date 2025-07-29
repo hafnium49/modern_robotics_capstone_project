@@ -126,8 +126,8 @@ def create_perfect_initial_config():
     # Configuration that should place end-effector close to Tse_init
     # These values are tuned to minimize initial error
     phi_init = 0.0  # No chassis rotation
-    x_init = 0.15   # Close to expected position
-    y_init = 0.15   # Close to expected position
+    x_init = 0.0    # Chassis at origin
+    y_init = 0.0    # Chassis at origin
     
     # Joint angles - designed to achieve the desired end-effector pose
     # theta3 < -0.2 for conservative limits compliance
