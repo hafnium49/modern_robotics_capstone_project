@@ -14,7 +14,7 @@ R = 0.0475  # wheel radius (m)
 L = 0.235   # half front-back wheel separation (m)
 W = 0.150   # half side-side wheel separation (m)
 DT = 0.01   # controller sample time (s)
-SPEED_LIMIT = 12.3  # rad/s
+SPEED_LIMIT = 5.0 # 12.3  # rad/s
 PINV_TOLERANCE = 1e-3
 
 # youBot transformation matrices (from spec)
