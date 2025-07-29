@@ -664,56 +664,6 @@ def test_complete_milestone_integration():
 # SPECIALIZED FEEDFORWARD TESTS
 # =============================================================================
 
-def test_feedforward_only_mode():
-    """Test the new feedforward_only=True parameter.
-    
-    Uses revised approach:
-    1. Set initial robot configuration first
-    2. Compute actual end-effector pose via forward kinematics
-    3. Generate trajectory starting from actual pose
-    
-    This eliminates initial pose mismatch for true feedforward testing.
-    """
-    print("\n=== Testing feedforward_only=True Mode ===")
-    
-    # Get default poses
-    Tsc_init, Tsc_goal = create_default_cube_poses()
-    Tce_grasp, Tce_standoff = create_grasp_transforms()
-    
-    try:
-        config_log, error_log, success = run_capstone_simulation(
-            Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
-            output_dir="milestone3_feedforward_tests/feedforward_only",
-            feedforward_only=True
-        )
-        
-        if success:
-            final_pos_error = np.linalg.norm(error_log[-1, 3:6])
-            final_orient_error = np.linalg.norm(error_log[-1, :3])
-            
-            print(f"  ✓ Feedforward-only test completed")
-            print(f"  Generated trajectory: {len(config_log)} timesteps")
-            print(f"  Final position error: {final_pos_error:.6f} m")
-            print(f"  Final orientation error: {final_orient_error:.6f} rad")
-            
-            # Validate that the output file is in correct format
-            csv_filename = os.path.join("milestone3_feedforward_tests/feedforward_only", "youBot_output.csv")
-            assert os.path.exists(csv_filename), "Should generate youBot_output.csv"
-            
-            # Verify file format (13 columns for Scene 6 compatibility)
-            data = np.loadtxt(csv_filename, delimiter=',')
-            assert data.shape[1] == 13, f"Should have 13 columns, got {data.shape[1]}"
-            
-            return True, (config_log, error_log, final_pos_error, final_orient_error)
-        else:
-            print("  ✗ Feedforward-only test failed")
-            return False, None
-            
-    except Exception as e:
-        print(f"  ✗ Error in feedforward-only test: {e}")
-        return False, None
-
-
 def test_backward_compatibility():
     """Test backward compatibility with run_perfect_feedforward_simulation."""
     print("\n=== Testing Backward Compatibility ===")
@@ -818,8 +768,8 @@ def test_error_initial_configuration():
 
 
 def test_feedforward_only_perfect_initial():
-    """Legacy function name - calls the new consolidated test."""
-    return test_feedforward_only_mode()
+    """Legacy function name - calls the perfect initial configuration test."""
+    return test_perfect_initial_configuration()
 
 
 # Legacy test maintained for compatibility
@@ -846,7 +796,8 @@ def test_feedforward_only_perfect_initial_legacy():
     try:
         config_log, error_log, success = run_capstone_simulation(
             Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
-            output_dir=output_dir, feedforward_only=True
+            Kp=np.zeros((6, 6)), Ki=np.zeros((6, 6)),
+            output_dir=output_dir, use_perfect_initial=True
         )
         
         assert success, "Perfect feedforward simulation should complete successfully"
@@ -1576,13 +1527,13 @@ def run_comprehensive_feedforward_tests():
     # Run all feedforward tests and collect results
     results = {}
     
-    # Test 1: Feedforward-only mode
+    # Test 1: Perfect initial configuration (pure feedforward)
     try:
-        success, result = test_feedforward_only_mode()
+        success, result = test_perfect_initial_configuration()
         if success:
-            results['feedforward_only'] = result
+            results['perfect_initial'] = result
     except Exception as e:
-        print(f"  ✗ Feedforward-only test failed: {e}")
+        print(f"  ✗ Perfect initial configuration test failed: {e}")
     
     # Test 2: Backward compatibility
     try:
@@ -1592,15 +1543,7 @@ def run_comprehensive_feedforward_tests():
     except Exception as e:
         print(f"  ✗ Backward compatibility test failed: {e}")
     
-    # Test 3: Perfect initial configuration  
-    try:
-        success, result = test_perfect_initial_configuration()
-        if success:
-            results['perfect_initial'] = result
-    except Exception as e:
-        print(f"  ✗ Perfect initial configuration test failed: {e}")
-    
-    # Test 4: Error initial configuration
+    # Test 3: Error initial configuration
     try:
         success, result = test_error_initial_configuration()
         if success:
@@ -1616,19 +1559,19 @@ def run_comprehensive_feedforward_tests():
     
     # Summary
     print("\n" + "=" * 70)
-    print(f"FEEDFORWARD TEST SUMMARY: {len(results)}/4 tests completed successfully")
+    print(f"FEEDFORWARD TEST SUMMARY: {len(results)}/3 tests completed successfully")
     
-    if len(results) == 4:
-        print("✅ ALL FEEDFORWARD TESTS PASSED - Consolidated function working perfectly!")
-        print("✅ Backward compatibility maintained")
+    if len(results) == 3:
+        print("✅ ALL FEEDFORWARD TESTS PASSED - Pure feedforward working perfectly!")
+        print("✅ Backward compatibility maintained") 
         print("✅ Revised approach eliminates trajectory-robot mismatch")
         print("✅ All feedforward simulation modes functioning correctly")
     else:
-        print(f"⚠️  {4-len(results)} feedforward tests failed - check error messages above")
+        print(f"⚠️  {3-len(results)} feedforward tests failed - check error messages above")
     
     print("=" * 70)
     
-    return len(results) == 4
+    return len(results) == 3
 
 
 # =============================================================================
@@ -1745,8 +1688,8 @@ def run_all_tests():
         test_integration_with_nextstate,
         test_complete_milestone_integration,
         
-        # Specialized feedforward tests - Updated to use new comprehensive tests
-        test_feedforward_only_mode,  # Replaced test_feedforward_only_perfect_initial
+        # Specialized feedforward tests
+        test_perfect_initial_configuration,  # Pure feedforward with Kp=Ki=zeros
         test_feedforward_with_initial_error,
         test_feedforward_trajectory_following,
         

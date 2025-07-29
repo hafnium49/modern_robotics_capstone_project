@@ -238,8 +238,7 @@ def compute_current_ee_pose(config):
 
 
 def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff, 
-                          Kp=None, Ki=None, output_dir="results/best", use_perfect_initial=False,
-                          feedforward_only=False):
+                          Kp=None, Ki=None, output_dir="results/best", use_perfect_initial=False):
     """Run the complete capstone simulation using revised trajectory generation approach.
     
     This function now follows the improved approach:
@@ -259,7 +258,6 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         Ki: 6x6 integral gain matrix (default provided)
         output_dir: directory for output files
         use_perfect_initial: if True, use minimal error config; if False, use significant error
-        feedforward_only: if True, use pure feedforward (Kp=Ki=0, forces use_perfect_initial=True)
         
     Returns:
         config_log: Nx12 array of robot configurations
@@ -267,25 +265,26 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         success: boolean indicating if simulation completed
     """
     
-    # Handle feedforward_only mode
-    if feedforward_only:
-        # Force perfect initial configuration and zero gains for pure feedforward
+    
+    # Default gains as suggested in Milestone 4 (conservative for large initial errors)
+    if Kp is None:
+        Kp = np.diag([3, 3, 3, 3, 3, 3])  # Moderate proportional gains
+    if Ki is None:
+        Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Small integral gains to prevent windup
+    
+    # Detect pure feedforward mode (both Kp and Ki are zero matrices)
+    is_feedforward_only = (np.allclose(Kp, 0) and np.allclose(Ki, 0))
+    
+    if is_feedforward_only:
+        # Force perfect initial configuration for pure feedforward testing
         use_perfect_initial = True
-        Kp = np.zeros((6, 6))
-        Ki = np.zeros((6, 6))
-        print("=== Perfect Feedforward Simulation ===")
+        print("=== Pure Feedforward Simulation ===")
         print("Using revised approach: config → forward kinematics → trajectory")
-    else:
-        # Default gains as suggested in Milestone 4 (conservative for large initial errors)
-        if Kp is None:
-            Kp = np.diag([3, 3, 3, 3, 3, 3])  # Moderate proportional gains
-        if Ki is None:
-            Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Small integral gains to prevent windup
     
     # Create initial configuration first - either perfect or with error
     if use_perfect_initial:
         config = create_perfect_initial_config()
-        if feedforward_only:
+        if is_feedforward_only:
             print(f"Initial robot config: phi={config[0]:.3f}, x={config[1]:.3f}, y={config[2]:.3f}")
             print(f"Joint angles: {config[3:8]}")
         else:
@@ -303,12 +302,12 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     
     # Compute actual end-effector pose from the chosen configuration
     Tse_actual = compute_current_ee_pose(config)
-    if feedforward_only:
+    if is_feedforward_only:
         print(f"Actual end-effector position: {Tse_actual[:3, 3]}")
     else:
         print(f"Actual initial end-effector position: {Tse_actual[:3, 3]}")
     
-    if feedforward_only:
+    if is_feedforward_only:
         print("Generating trajectory from actual robot pose ...", end="", flush=True)
     else:
         print("Generating reference trajectory from actual robot pose ...", end="", flush=True)
@@ -340,7 +339,7 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     config_log[0] = config
     trajectory_log[0] = trajectory[0]
     
-    print(f"Simulating {N_points-1} control steps with {'perfect feedforward' if feedforward_only else 'joint limits enforcement'} ...", end="", flush=True)
+    print(f"Simulating {N_points-1} control steps with {'pure feedforward' if is_feedforward_only else 'joint limits enforcement'} ...", end="", flush=True)
     
     # Main control loop
     for i in range(N_points - 1):
@@ -391,8 +390,8 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     
     # Save in Scene 6 compatible format (no headers, precise formatting)
     np.savetxt(youbot_output_path, youbot_data, delimiter=',', fmt='%.6f')
-    if feedforward_only:
-        print(f"Perfect feedforward CSV written to {youbot_output_path}")
+    if is_feedforward_only:
+        print(f"Pure feedforward CSV written to {youbot_output_path}")
     else:
         print(f"Scene 6 compatible CSV written to {youbot_output_path}")
     
@@ -405,11 +404,11 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     print(f"Error log written to {error_output_path}")
     
     # Print performance summary for feedforward mode
-    if feedforward_only:
+    if is_feedforward_only:
         final_pos_error = np.linalg.norm(error_log[-1, 3:6])
         final_orient_error = np.linalg.norm(error_log[-1, :3])
         
-        print(f"\n=== Perfect Feedforward Results ===")
+        print(f"\n=== Pure Feedforward Results ===")
         print(f"Initial pose match: {pose_error:.2e}")
         print(f"Final position error: {final_pos_error:.6f} m")
         print(f"Final orientation error: {final_orient_error:.6f} rad")
@@ -460,13 +459,14 @@ def verify_scene6_compatibility(csv_path):
 
 def run_perfect_feedforward_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff, 
                                      output_dir="results/perfect_feedforward"):
-    """Backward compatibility function - now calls run_capstone_simulation with feedforward_only=True.
+    """Backward compatibility function - now calls run_capstone_simulation with Kp=Ki=zeros.
     
-    This function is deprecated. Use run_capstone_simulation(feedforward_only=True) instead.
+    This function is deprecated. Use run_capstone_simulation(Kp=zeros, Ki=zeros) instead.
     """
     return run_capstone_simulation(
         Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
-        output_dir=output_dir, feedforward_only=True
+        Kp=np.zeros((6, 6)), Ki=np.zeros((6, 6)),
+        output_dir=output_dir, use_perfect_initial=True
     )
 
 
