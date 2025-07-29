@@ -1323,7 +1323,13 @@ def test_adjoint_mapping():
 # =============================================================================
 
 def test_generate_feedforward_csv_files():
-    """Generate all feedforward CSV files using run_capstone.py for CoppeliaSim testing."""
+    """
+    Generate several feed-forward CSV files in Scene-6 format.
+    • The "perfect_initial" variant is now **explicitly** run with
+      use_perfect_initial=True so that the file
+      milestone3_feedforward_tests/perfect_initial_output/youBot_output.csv
+      is produced from the perfect-match initial pose.
+    """
     print("Generating feedforward CSV files using run_capstone.py...")
     
     # Ensure output directory exists
@@ -1339,7 +1345,8 @@ def test_generate_feedforward_csv_files():
             "name": "perfect_initial",
             "description": "Perfect initial pose with feedforward only",
             "Kp": np.zeros((6, 6)),  # Feedforward only
-            "Ki": np.zeros((6, 6))
+            "Ki": np.zeros((6, 6)),
+            "use_perfect_initial": True      # <-- key change
         },
         {
             "name": "small_error", 
@@ -1374,7 +1381,8 @@ def test_generate_feedforward_csv_files():
             config_log, error_log, success = run_capstone_simulation(
                 Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
                 Kp=case['Kp'], Ki=case['Ki'], 
-                output_dir=case_output_dir
+                output_dir=case_output_dir,
+                use_perfect_initial=case.get("use_perfect_initial", False)  # <-- new argument
             )
             
             if success:
