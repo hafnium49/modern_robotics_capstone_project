@@ -93,23 +93,20 @@ def create_grasp_transforms():
         Tce_grasp: 4x4 SE(3) - grasp transform relative to cube
         Tce_standoff: 4x4 SE(3) - standoff transform relative to cube
     """
-    # Tce_grasp: End-effector pointing downward to grasp cube from above
-    # Rotation: 180° about x-axis to flip the gripper downward
-    # Position: [0, 0, 0.02] m (cube halfway into fingers)
+    # Grasp pose aligned with cube axes (no rotation)
     Tce_grasp = np.array([
-        [1,  0,  0, 0],
-        [0, -1,  0, 0],
-        [0,  0, -1, 0.02],
-        [0,  0,  0, 1]
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0.02],
+        [0, 0, 0, 1]
     ])
-    
-    # Tce_standoff = Tce_grasp shifted +[0,0,0.10] m in z_c (before rotation)
-    # Since we rotated 180° about x, the standoff should be further in -z direction
+
+    # Standoff pose 10 cm above the grasp pose
     Tce_standoff = np.array([
-        [1,  0,  0, 0],
-        [0, -1,  0, 0],
-        [0,  0, -1, 0.12],  # 0.02 + 0.10
-        [0,  0,  0, 1]
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0.12],
+        [0, 0, 0, 1]
     ])
     
     return Tce_grasp, Tce_standoff
@@ -142,7 +139,7 @@ def create_perfect_initial_config():
     return config
 
 
-def create_initial_config_with_error():
+def create_initial_config_with_error(traj_row=None):
     """Create initial robot configuration with significant error.
     
     Must have ≥0.20 m position error AND ≥30 deg orientation error
@@ -151,8 +148,11 @@ def create_initial_config_with_error():
     Returns:
         config: 12-element initial configuration [phi, x, y, theta1-5, w1-4]
     """
-    # Use the specification pose directly - this is what the error is relative to
-    Tse_spec = create_initial_ee_pose()
+    # Use the provided trajectory row to determine reference pose if given
+    if traj_row is not None:
+        Tse_spec = extract_pose_from_trajectory_row(traj_row)
+    else:
+        Tse_spec = create_initial_ee_pose()
     p_desired = Tse_spec[:3, 3]
     
     # Create initial configuration with significant but manageable errors
@@ -323,7 +323,7 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     config_log = np.zeros((N_points, 12))
     error_log = np.zeros((N_points-1, 6))
     trajectory_log = np.zeros((N_points, 13))
-    joint_limits_log = []  # Track joint limit violations
+    joint_limits_log = []  # Track joint limit violations (disabled for feedforward)
     
     # Log initial configuration
     config_log[0] = config
@@ -340,17 +340,24 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         # Compute current end-effector pose
         X_actual = compute_current_ee_pose(config)
         
-        # Enhanced feedback control with joint limits enforcement
-        # This follows the document's recommendation to modify Jacobian columns for limited joints
-        V_cmd, controls, X_err, integral_error, joint_limits_info = FeedbackControlWithJointLimits(
-            X_actual, X_desired, X_desired_next, Kp, Ki, DT_CAPSTONE, 
-            integral_error, config, use_conservative_limits=True
-        )
-        
-        # Log joint limits information for analysis
-        joint_limits_log.append(joint_limits_info)
-        
-        # Controls are already clipped in FeedbackControlWithJointLimits
+        # Choose control method based on mode
+        if is_feedforward_only:
+            # Pure feedforward: skip joint limit enforcement for exact tracking
+            V_cmd, controls, X_err, integral_error = FeedbackControl(
+                X_actual, X_desired, X_desired_next, Kp, Ki, DT_CAPSTONE,
+                integral_error, config
+            )
+        else:
+            # Feedback + joint limits enforcement
+            V_cmd, controls, X_err, integral_error, joint_limits_info = FeedbackControlWithJointLimits(
+                X_actual, X_desired, X_desired_next, Kp, Ki, DT_CAPSTONE,
+                integral_error, config, use_conservative_limits=True
+            )
+
+            # Log joint limits information for analysis
+            joint_limits_log.append(joint_limits_info)
+
+        # Controls are already clipped in FeedbackControl / FeedbackControlWithJointLimits
         # Simulate robot motion
         config = NextState(config, controls, DT_CAPSTONE, SPEED_LIMIT)
         
@@ -360,14 +367,15 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         trajectory_log[i+1] = trajectory[i+1]
     
     print(" done")
-    
-    # Analyze joint limits enforcement
-    total_violations = sum(1 for info in joint_limits_log if info['limits_enforced'])
-    jacobian_modifications = sum(1 for info in joint_limits_log if info['jacobian_modified'])
-    
-    print(f"Joint limits analysis:")
-    print(f"  - Time steps with limit violations: {total_violations}/{len(joint_limits_log)} ({100*total_violations/len(joint_limits_log):.1f}%)")
-    print(f"  - Jacobian modifications applied: {jacobian_modifications}")
+
+    if not is_feedforward_only:
+        # Analyze joint limits enforcement
+        total_violations = sum(1 for info in joint_limits_log if info['limits_enforced'])
+        jacobian_modifications = sum(1 for info in joint_limits_log if info['jacobian_modified'])
+
+        print(f"Joint limits analysis:")
+        print(f"  - Time steps with limit violations: {total_violations}/{len(joint_limits_log)} ({100*total_violations/len(joint_limits_log):.1f}%)")
+        print(f"  - Jacobian modifications applied: {jacobian_modifications}")
     
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
