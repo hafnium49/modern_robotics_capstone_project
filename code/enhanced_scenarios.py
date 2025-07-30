@@ -34,9 +34,9 @@ except ImportError:
         return Tsc_init, Tsc_goal
     
     def create_grasp_transforms():
-        """Fallback grasp transforms."""
-        Tce_grasp = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0.02], [0, 0, 0, 1]])
-        Tce_standoff = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0.12], [0, 0, 0, 1]])
+        """Fallback grasp transforms with downward gripper orientation."""
+        Tce_grasp = np.array([[0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0.02], [0, 0, 0, 1]])
+        Tce_standoff = np.array([[0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0.12], [0, 0, 0, 1]])
         return Tce_grasp, Tce_standoff
     
     def create_initial_ee_pose():
