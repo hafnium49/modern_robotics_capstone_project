@@ -196,7 +196,7 @@ class TestMilestone4Integration:
         np.testing.assert_allclose(T[3, :], [0, 0, 0, 1], rtol=1e-6)
         
         # Position should be forward kinematics result
-        expected_pos = np.array([0.1662 + 0.033, 0, 0.0026 + 0.6546])  # TB0 + M0E positions
+        expected_pos = np.array([0.1662 + 0.033, 0, 0.0963 + 0.0026 + 0.6546])  # H + TB0 + M0E positions
         np.testing.assert_allclose(T[:3, 3], expected_pos, rtol=1e-3)
         
     def test_feedback_control_integration(self):
