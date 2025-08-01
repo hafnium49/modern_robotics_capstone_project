@@ -26,6 +26,7 @@ from .trajectory_generator import TrajectoryGenerator
 from .feedback_control import FeedbackControl, FeedbackControlWithJointLimits, compute_jacobian
 from .feedback_control import R, L, W, DT, TB0, M0E, BLIST, INV_TB0, PINV_TOLERANCE
 from .feedback_control import checkJointLimits, enforceJointLimits
+from .next_state import H
 
 
 # Fixed constants for Milestone 4
@@ -95,11 +96,11 @@ def create_grasp_transforms():
     """
     # Grasp pose rotated so the gripper points downward
     # (90° about the y-axis so the gripper's closing direction is along −Z).
-    # Translation is at the cube center.
+    # Translation is 0.02m above the cube center (Scene 6 spec).
     Tce_grasp = np.array([
         [0, 0, 1, 0],
         [0, 1, 0, 0],
-        [-1, 0, 0, 0],
+        [-1, 0, 0, 0.02],
         [0, 0, 0, 1]
     ])
 
@@ -108,7 +109,7 @@ def create_grasp_transforms():
     Tce_standoff = np.array([
         [0, 0, 1, 0],
         [0, 1, 0, 0],
-        [-1, 0, 0, 0.1],
+        [-1, 0, 0, 0.12],
         [0, 0, 0, 1]
     ])
     
@@ -223,7 +224,7 @@ def compute_current_ee_pose(config):
     Tsb = np.array([
         [cos_phi, -sin_phi, 0, x],
         [sin_phi,  cos_phi, 0, y],
-        [0,        0,       1, 0],
+        [0,        0,       1, H],
         [0,        0,       0, 1]
     ])
     
