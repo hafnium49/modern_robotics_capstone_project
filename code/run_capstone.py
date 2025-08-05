@@ -96,20 +96,20 @@ def create_grasp_transforms():
     """
     # Grasp pose rotated so the gripper points downward
     # (90° about the y-axis so the gripper's closing direction is along −Z).
-    # Translation is 0.02m above the cube center (Scene 6 spec).
+    # Translation is now centered on the cube to ensure a secure grip.
     Tce_grasp = np.array([
         [0, 0, 1, 0],
         [0, 1, 0, 0],
-        [-1, 0, 0, 0.02],
+        [-1, 0, 0, 0.0],
         [0, 0, 0, 1]
     ])
 
     # Standoff pose directly above the cube with the same orientation,
-    # 10 cm higher in the world Z direction.
+    # 10 cm higher than the grasp pose in the world Z direction.
     Tce_standoff = np.array([
         [0, 0, 1, 0],
         [0, 1, 0, 0],
-        [-1, 0, 0, 0.12],
+        [-1, 0, 0, 0.10],
         [0, 0, 0, 1]
     ])
     

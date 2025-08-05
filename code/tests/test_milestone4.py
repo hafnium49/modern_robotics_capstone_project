@@ -103,7 +103,7 @@ class TestMilestone4Setup:
         expected_grasp = np.array([
             [0, 0, 1, 0],
             [0, 1, 0, 0],
-            [-1, 0, 0, 0.02],
+            [-1, 0, 0, 0.0],
             [0, 0, 0, 1]
         ])
         np.testing.assert_allclose(Tce_grasp, expected_grasp, rtol=1e-6)
@@ -112,7 +112,7 @@ class TestMilestone4Setup:
         expected_standoff = np.array([
             [0, 0, 1, 0],
             [0, 1, 0, 0],
-            [-1, 0, 0, 0.12],
+            [-1, 0, 0, 0.10],
             [0, 0, 0, 1]
         ])
         np.testing.assert_allclose(Tce_standoff, expected_standoff, rtol=1e-6)
