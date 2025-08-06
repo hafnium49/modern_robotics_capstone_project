@@ -203,8 +203,13 @@ def run_best_scenario(output_dir=None):
     print("="*60)
     
     # Well-tuned feedforward + PI controller
-    Kp = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Very small gains like milestone3
-    Ki = np.diag([0.001, 0.001, 0.001, 0.001, 0.001, 0.001])  # Minimal integral
+    # Use moderate gains that can correct large initial errors while
+    # still providing smooth convergence. The previous values were
+    # unintentionally tiny (0.1 and 0.001), leaving the robot far from
+    # the cube and causing pickup failure. These gains match the values
+    # documented below.
+    Kp = np.diag([4, 4, 4, 4, 4, 4])
+    Ki = np.diag([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
     
     return run_scenario(
         "best", Kp, Ki,
