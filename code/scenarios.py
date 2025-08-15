@@ -215,9 +215,12 @@ def run_best_scenario(output_dir="results/best"):
     """
     print("=== Running Best Performance Scenario ===")
     
-    # Well-tuned gains for good performance with large initial errors
-    Kp = np.diag([3, 3, 3, 3, 3, 3])  # Moderate proportional gains
-    Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Small integral gains
+    # Well-tuned gains for good performance with large initial errors.
+    # These match the gains used in the milestone tests to ensure the
+    # robot successfully grasps the cube when starting with a sizeable
+    # configuration error.
+    Kp = np.diag([4, 4, 4, 4, 4, 4])
+    Ki = np.diag([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
     
     Tsc_init, Tsc_goal = create_default_cube_poses()
     Tce_grasp, Tce_standoff = create_grasp_transforms()
