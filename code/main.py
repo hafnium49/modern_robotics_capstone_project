@@ -201,10 +201,13 @@ def run_best_scenario(output_dir=None):
     print("\n" + "="*60)
     print("GENERATING BEST SCENARIO RESULTS")
     print("="*60)
-    
+
     # Well-tuned feedforward + PI controller
-    Kp = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Very small gains like milestone3
-    Ki = np.diag([0.001, 0.001, 0.001, 0.001, 0.001, 0.001])  # Minimal integral
+    # Use the same gains as the milestone 3 tests to ensure the robot
+    # can accurately track the pick-and-place trajectory even with the
+    # large initial pose error required by the project specification.
+    Kp = np.diag([4, 4, 4, 4, 4, 4])
+    Ki = np.diag([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
     
     return run_scenario(
         "best", Kp, Ki,

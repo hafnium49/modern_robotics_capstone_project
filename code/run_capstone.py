@@ -266,11 +266,14 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     """
     
     
-    # Default gains as suggested in Milestone 4 (conservative for large initial errors)
+    # Default gains aligned with the milestone 3 test configuration.  These
+    # values provide reliable convergence from the large initial pose error
+    # used throughout the project while remaining stable for the automated
+    # tests.
     if Kp is None:
-        Kp = np.diag([3, 3, 3, 3, 3, 3])  # Moderate proportional gains
+        Kp = np.diag([4, 4, 4, 4, 4, 4])
     if Ki is None:
-        Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Small integral gains to prevent windup
+        Ki = np.diag([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
     
     # Detect pure feedforward mode (both Kp and Ki are zero matrices)
     is_feedforward_only = (np.allclose(Kp, 0) and np.allclose(Ki, 0))
