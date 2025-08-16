@@ -2,7 +2,46 @@
 """
 Final Milestone (Milestone 4): Software Integration Driver
 
-This module implements the complete capstone project integration, combining:
+This modu    # Corrected     # Grasp pose rotated s    # Standoff transform with same orientation, 10cm above grasp
+    Tce_standoff = np.array([
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0.10],
+        [0, 0, 0, 1]
+    ])ipper points downward
+    # (180° about x-axis so the gripper's closing direction is along −Z).
+    # Translation is now centered on the cube to ensure a secure grip.
+    Tce_grasp = np.array([
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0.0],
+        [0, 0, 0, 1]
+    ])
+
+    # Standoff pose directly above the cube with the same orientation,
+    # 10 cm higher than the grasp pose in the world Z direction.
+    Tce_standoff = np.array([
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0.10],
+        [0, 0, 0, 1]
+    ])th proper downward orientation
+    # This matches the working configuration from test_milestone3.py
+    Tce_grasp = np.array([
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0.0],
+        [0, 0, 0, 1]
+    ])
+
+    # Standoff pose with the same corrected orientation,
+    # 10 cm higher than the grasp pose in the world Z direction.
+    Tce_standoff = np.array([
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0.10],
+        [0, 0, 0, 1]
+    ])complete capstone project integration, combining:
 - Milestone 1: NextState kinematic simulator
 - Milestone 2: TrajectoryGenerator for pick-and-place path
 - Milestone 3: FeedbackControl for task-space control
@@ -94,13 +133,12 @@ def create_grasp_transforms():
         Tce_grasp: 4x4 SE(3) - grasp transform relative to cube
         Tce_standoff: 4x4 SE(3) - standoff transform relative to cube
     """
-    # Grasp pose rotated so the gripper points downward
-    # (90° about the y-axis so the gripper's closing direction is along −Z).
-    # Translation is now centered on the cube to ensure a secure grip.
+    # Use identical transforms from test_milestone3.py that work correctly
+    # Corrected grasp transform with proper downward orientation
     Tce_grasp = np.array([
-        [0, 0, 1, 0],
-        [0, 1, 0, 0],
-        [-1, 0, 0, 0.0],
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0.0],
         [0, 0, 0, 1]
     ])
 
@@ -124,15 +162,16 @@ def create_perfect_initial_config():
     Returns:
         config: 12-element initial configuration [phi, x, y, theta1-5, w1-4]
     """
-    # Configuration that should place end-effector close to Tse_init
-    # These values are tuned to minimize initial error
+    # Configuration that should place end-effector close to cube pickup height
+    # These values are tuned to minimize initial error for cube manipulation
     phi_init = 0.0  # No chassis rotation
     x_init = 0.0    # Chassis at origin
     y_init = 0.0    # Chassis at origin
     
-    # Joint angles - designed to achieve the desired end-effector pose
-    # theta3 < -0.2 for conservative limits compliance
-    theta_init = np.array([0.0, 0.0, -0.3, 0.2, 0.0])
+    # Joint angles - designed to achieve proper end-effector height for cube pickup
+    # Joint 2 at -90° to bring end-effector down to cube level (~0.09m total height)
+    # Joint 3 < -0.2 for conservative limits compliance
+    theta_init = np.array([0.0, -1.57, -0.3, 0.2, 0.0])
     
     # Wheel angles (not critical for initial pose)
     w_init = np.zeros(4)
@@ -165,8 +204,9 @@ def create_initial_config_with_error(traj_row=None):
     y_init = p_desired[1] + 0.15  # +0.15m position error in y (total ~0.21m > 0.20m requirement)
     
     # Joint angles - use better starting configuration for manipulation
+    # Joint 2 at -90° to bring end-effector to appropriate height for cube pickup
     # Conservative limits applied to avoid singularities (joints 3&4 away from zero)
-    theta_init = np.array([0.0, 0.0, -0.3, -1.6, 0.0])  # Joint 3 < -0.2 rad as recommended
+    theta_init = np.array([0.0, -1.57, -0.3, -1.6, 0.0])  # Joint 2 at -90°, Joint 3 < -0.2 rad as recommended
     
     # Wheel angles (not critical for initial pose)
     w_init = np.zeros(4)
