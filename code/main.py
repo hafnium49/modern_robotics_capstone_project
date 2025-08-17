@@ -203,17 +203,18 @@ def run_best_scenario(output_dir=None):
     print("="*60)
 
     # Well-tuned feedforward + PI controller
-    # Use the same gains as the milestone 3 tests to ensure the robot
-    # can accurately track the pick-and-place trajectory even with the
-    # large initial pose error required by the project specification.
-    Kp = np.diag([4, 4, 4, 4, 4, 4])
-    Ki = np.diag([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
+    # Use the same gains as the milestone 3 tests (large error case) to
+    # ensure the robot can accurately track the pick-and-place trajectory
+    # even with the large initial pose error required by the project
+    # specification.
+    Kp = np.diag([3.0, 3.0, 3.0, 3.0, 3.0, 3.0])
+    Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
     
     return run_scenario(
         "best", Kp, Ki,
         controller_description="Feedforward + PI Control",
-        gains_description="4, 4, 4, 4, 4, 4, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2",
-        notes="Well-tuned gains for smooth convergence with minimal overshoot",
+        gains_description="3, 3, 3, 3, 3, 3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1",
+        notes="Gains aligned with test configuration for reliable convergence",
         output_dir=output_dir
     )
 
