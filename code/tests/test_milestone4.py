@@ -7,6 +7,7 @@ verifying proper integration of all milestones and correct system behavior.
 
 import pytest
 import numpy as np
+import pandas as pd
 import os
 import tempfile
 import shutil
@@ -66,6 +67,132 @@ except ImportError as e:
     except ImportError as e2:
         print(f"Both import methods failed: {e2}")
         raise
+
+
+# =============================================================================
+# GRIPPER POSE ANALYSIS UTILITIES (consolidated from check_gripper_poses.py and check_higher_gains.py)
+# =============================================================================
+
+# youBot transformation matrices
+TB0 = np.array([
+    [1, 0, 0, 0.1662],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0.0026],
+    [0, 0, 0, 1]
+])
+
+M0E = np.array([
+    [1, 0, 0, 0.033],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0.6546],
+    [0, 0, 0, 1]
+])
+
+BLIST = np.array([
+    [0, 0, 1, 0, 0.033, 0],
+    [0, -1, 0, -0.5076, 0, 0],
+    [0, -1, 0, -0.3526, 0, 0],
+    [0, -1, 0, -0.2176, 0, 0],
+    [0, 0, 1, 0, 0, 0]
+]).T
+
+H = 0.0963  # chassis height
+
+
+def compute_current_ee_pose_test(config):
+    """Compute current end-effector pose from robot configuration for testing."""
+    phi, x, y = config[0], config[1], config[2]
+    theta = config[3:8]
+    
+    # Chassis-to-base transform
+    cos_phi = np.cos(phi)
+    sin_phi = np.sin(phi)
+    Tsb = np.array([
+        [cos_phi, -sin_phi, 0, x],
+        [sin_phi,  cos_phi, 0, y],
+        [0,        0,       1, H],
+        [0,        0,       0, 1]
+    ])
+    
+    # Base-to-end-effector transform
+    T0e = mr.FKinBody(M0E, BLIST, theta)
+    
+    # Complete transformation: space -> chassis -> base -> end-effector
+    Tse = Tsb @ TB0 @ T0e
+    
+    return Tse
+
+
+def analyze_gripper_pose_at_pickup(config, description=""):
+    """Analyze gripper pose when it attempts cube pickup."""
+    T = compute_current_ee_pose_test(config)
+    cube_pos = np.array([1.0, 0.0, 0.025])
+    distance = np.linalg.norm(T[:3,3] - cube_pos)
+    
+    analysis = {
+        'description': description,
+        'ee_position': T[:3, 3],
+        'cube_position': cube_pos,
+        'distance_to_cube': distance,
+        'distance_mm': distance * 1000,
+        'gripper_orientation': T[:3, 2],  # Z-axis should point down
+        'success': distance < 0.05,  # Within 5cm threshold
+        'excellent': distance < 0.01  # Within 1cm threshold
+    }
+    
+    return analysis
+
+
+def compare_gripper_analyses(analyses_dict):
+    """Compare multiple gripper pose analyses."""
+    print("\n" + "="*70)
+    print("GRIPPER POSE COMPARISON ANALYSIS")
+    print("="*70)
+    
+    cube_pos = np.array([1.0, 0.0, 0.025])
+    
+    for name, analysis in analyses_dict.items():
+        distance_mm = analysis['distance_mm']
+        status = "🏆 PERFECT" if analysis['excellent'] else "✅ SUCCESS" if analysis['success'] else "❌ FAILED"
+        
+        print(f"\n{name}:")
+        print(f"  Position: [{analysis['ee_position'][0]:.3f}, {analysis['ee_position'][1]:.3f}, {analysis['ee_position'][2]:.3f}]")
+        print(f"  Distance: {distance_mm:.1f} mm ({status})")
+        
+    # Calculate improvements
+    if len(analyses_dict) >= 2:
+        results = list(analyses_dict.values())
+        original_distance = results[0]['distance_to_cube']
+        final_distance = results[-1]['distance_to_cube']
+        
+        improvement_pct = ((original_distance - final_distance) / original_distance) * 100
+        improvement_mm = (original_distance - final_distance) * 1000
+        
+        print(f"\n📊 IMPROVEMENT SUMMARY:")
+        print(f"  Total improvement: {improvement_pct:.1f}%")
+        print(f"  Distance reduction: {improvement_mm:.1f} mm closer")
+        
+    return analyses_dict
+
+
+def find_gripper_close_index(trajectory):
+    """Find the index where gripper closes (transitions from 0 to 1)."""
+    for i in range(len(trajectory)-1):
+        if trajectory[i,12] == 0.0 and trajectory[i+1,12] == 1.0:
+            return i+1
+    return -1
+
+
+def extract_pose_from_trajectory_row_test(traj_row):
+    """Extract SE(3) pose from trajectory row for testing."""
+    R = traj_row[:9].reshape(3, 3)
+    p = traj_row[9:12]
+    
+    T = np.eye(4)
+    T[:3, :3] = R
+    T[:3, 3] = p
+    
+    return T
 
 import modern_robotics as mr
 
@@ -351,6 +478,110 @@ class TestMilestone4Simulation:
         except ImportError:
             # Should handle gracefully
             pass
+
+
+class TestGripperPoseAnalysis:
+    """Test class for gripper pose analysis utilities."""
+    
+    def test_gripper_analysis_perfect_initial(self):
+        """Test gripper pose analysis on perfect initial case."""
+        csv_file = "milestone3_feedforward_tests/perfect_initial/youBot_output.csv"
+        if os.path.exists(csv_file):
+            trajectory = np.loadtxt(csv_file, delimiter=',')
+            gripper_close_index = find_gripper_close_index(trajectory)
+            
+            assert gripper_close_index > 0, "Could not find gripper close transition"
+            
+            config = trajectory[gripper_close_index]
+            analysis = analyze_gripper_pose_at_pickup(config, "perfect_initial")
+            
+            # Should be excellent (< 1cm)
+            assert analysis['excellent'], f"Perfect initial should be excellent: {analysis['distance_mm']:.1f}mm"
+    
+    def test_gripper_analysis_best_result(self):
+        """Test gripper pose analysis on best result."""
+        csv_file = "results/best/youBot_output.csv"
+        if os.path.exists(csv_file):
+            trajectory = np.loadtxt(csv_file, delimiter=',')
+            gripper_close_index = find_gripper_close_index(trajectory)
+            
+            assert gripper_close_index > 0, "Could not find gripper close transition"
+            
+            config = trajectory[gripper_close_index]
+            analysis = analyze_gripper_pose_at_pickup(config, "best_result")
+            
+            # Should be successful (< 5cm)
+            assert analysis['success'], f"Best result should be successful: {analysis['distance_mm']:.1f}mm"
+    
+    def test_compare_multiple_results(self):
+        """Test comparison of multiple gripper analyses."""
+        files_to_test = [
+            ("milestone3_feedforward_tests/perfect_initial/youBot_output.csv", "perfect_initial"),
+            ("results/best/youBot_output.csv", "best_result"),
+            ("results/overshoot/youBot_output.csv", "overshoot_result"),
+            ("results/newTask/youBot_output.csv", "new_task_result")
+        ]
+        
+        analyses = {}
+        
+        for csv_file, description in files_to_test:
+            if os.path.exists(csv_file):
+                trajectory = np.loadtxt(csv_file, delimiter=',')
+                gripper_close_index = find_gripper_close_index(trajectory)
+                
+                if gripper_close_index > 0:
+                    config = trajectory[gripper_close_index]
+                    analysis = analyze_gripper_pose_at_pickup(config, description)
+                    analyses[description] = analysis
+        
+        # Should have at least one analysis
+        assert len(analyses) > 0, "No valid trajectory files found for comparison"
+        
+        # Run comparison (this will print results)
+        compare_gripper_analyses(analyses)
+        
+        # Test that comparison function returns the input
+        result = compare_gripper_analyses(analyses)
+        assert result == analyses, "Comparison function should return input analyses"
+    
+    def test_compute_ee_pose_consistency(self):
+        """Test that compute_current_ee_pose_test gives consistent results."""
+        # Test configuration from arm at home position
+        config = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        
+        T1 = compute_current_ee_pose_test(config)
+        T2 = compute_current_ee_pose_test(config)
+        
+        # Should be identical
+        np.testing.assert_array_almost_equal(T1, T2, decimal=10)
+        
+        # Check structure
+        assert T1.shape == (4, 4), "SE(3) transformation should be 4x4"
+        assert abs(np.linalg.det(T1[:3, :3]) - 1) < 1e-10, "Rotation matrix should have determinant 1"
+        np.testing.assert_array_almost_equal(T1[3, :], [0, 0, 0, 1], decimal=10, 
+                                           err_msg="Bottom row should be [0,0,0,1]")
+    
+    def test_trajectory_extraction_utilities(self):
+        """Test trajectory row extraction utilities."""
+        # Test with known trajectory row structure
+        test_row = np.array([
+            1, 0, 0,  # R row 1
+            0, 1, 0,  # R row 2  
+            0, 0, 1,  # R row 3
+            1.0, 0.0, 0.025,  # position
+            0  # gripper state
+        ])
+        
+        T = extract_pose_from_trajectory_row_test(test_row)
+        
+        expected_T = np.array([
+            [1, 0, 0, 1.0],
+            [0, 1, 0, 0.0],
+            [0, 0, 1, 0.025],
+            [0, 0, 0, 1]
+        ])
+        
+        np.testing.assert_array_almost_equal(T, expected_T, decimal=10)
 
 
 class TestMilestone4Validation:
