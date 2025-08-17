@@ -266,14 +266,14 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     """
     
     
-    # Default gains aligned with the milestone 3 test configuration.  These
-    # values provide reliable convergence from the large initial pose error
-    # used throughout the project while remaining stable for the automated
-    # tests.
+    # Solution 1: Higher gains for better tracking performance
+    # Increased from [4,4,4,4,4,4] and [0.2,0.2,0.2,0.2,0.2,0.2] to improve
+    # trajectory tracking accuracy, especially for the challenging initial error scenario.
+    # This should reduce the 19cm tracking error that prevents successful cube pickup.
     if Kp is None:
-        Kp = np.diag([4, 4, 4, 4, 4, 4])
+        Kp = np.diag([8, 8, 8, 8, 8, 8])  # Doubled proportional gains for faster response
     if Ki is None:
-        Ki = np.diag([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
+        Ki = np.diag([0.5, 0.5, 0.5, 0.5, 0.5, 0.5])  # Increased integral gains to eliminate steady-state error
     
     # Detect pure feedforward mode (both Kp and Ki are zero matrices)
     is_feedforward_only = (np.allclose(Kp, 0) and np.allclose(Ki, 0))
@@ -304,24 +304,35 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     else:
         print(f"Actual initial end-effector position: {Tse_actual[:3, 3]}")
     
+    # Choose trajectory generation approach based on mode
     if is_feedforward_only:
         print("Generating trajectory from actual robot pose ...", end="", flush=True)
+        # For feedforward, use actual pose to ensure perfect tracking
+        trajectory_start_pose = Tse_actual
     else:
-        print("Generating reference trajectory from actual robot pose ...", end="", flush=True)
+        print("Generating reference trajectory from specification pose ...", end="", flush=True)
+        # For feedback control, use specification pose for consistent pickup targets
+        trajectory_start_pose = create_initial_ee_pose()
+        print(f"\nUsing specification pose: {trajectory_start_pose[:3, 3]} instead of actual: {Tse_actual[:3, 3]}")
     
-    # Generate trajectory starting from actual robot pose (revised approach)
+    # Generate trajectory starting from chosen pose
     trajectory = TrajectoryGenerator(
-        Tse_actual, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
+        trajectory_start_pose, Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
         k=1, method="quintic"
     )
     
     N_points = len(trajectory)
     print(f" done ({N_points} points)")
     
-    # Verify initial pose match
-    traj_first_pose = extract_pose_from_trajectory_row(trajectory[0])
-    pose_error = np.linalg.norm(Tse_actual - traj_first_pose)
-    print(f"Initial pose match error: {pose_error:.2e} (should be ~0)")
+    # Verify initial pose match for feedforward mode only
+    if is_feedforward_only:
+        traj_first_pose = extract_pose_from_trajectory_row(trajectory[0])
+        pose_error = np.linalg.norm(Tse_actual - traj_first_pose)
+        print(f"Initial pose match error: {pose_error:.2e} (should be ~0)")
+    else:
+        traj_first_pose = extract_pose_from_trajectory_row(trajectory[0])
+        initial_tracking_error = np.linalg.norm(Tse_actual[:3,3] - traj_first_pose[:3,3])
+        print(f"Initial tracking error: {initial_tracking_error:.3f} m (feedback control will correct this)")
     
     # Initialize control state
     integral_error = np.zeros(6)
@@ -355,10 +366,10 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
                 integral_error, config
             )
         else:
-            # Feedback + joint limits enforcement
+            # Feedback + joint limits enforcement (use standard limits for better tracking)
             V_cmd, controls, X_err, integral_error, joint_limits_info = FeedbackControlWithJointLimits(
                 X_actual, X_desired, X_desired_next, Kp, Ki, DT_CAPSTONE,
-                integral_error, config, use_conservative_limits=True
+                integral_error, config, use_conservative_limits=False
             )
 
             # Log joint limits information for analysis

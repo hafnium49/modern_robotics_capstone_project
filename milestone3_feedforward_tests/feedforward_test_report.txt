@@ -16,22 +16,22 @@ Test scenarios:
    Description: Small initial error with feedforward + small feedback
    Proportional gains: diag(0.5)
    Integral gains: diag(0.0)
-   Status: ✓ Generated (2880 timesteps)
+   Status: ✓ Generated (3010 timesteps)
 
 3. medium_error.csv
    Description: Medium initial error with moderate feedback
    Proportional gains: diag(1.5)
    Integral gains: diag(0.05)
-   Status: ✓ Generated (2880 timesteps)
+   Status: ✓ Generated (3010 timesteps)
 
 4. large_error.csv
    Description: Large initial error with strong feedback
    Proportional gains: diag(3.0)
    Integral gains: diag(0.1)
-   Status: ✓ Generated (2880 timesteps)
+   Status: ✓ Generated (3010 timesteps)
 
 File format: chassis_phi, chassis_x, chassis_y, J1, J2, J3, J4, J5, W1, W2, W3, W4, gripper_state
 Compatible with: CoppeliaSim Scene 6 (CSV Mobile Manipulation youBot)
 Time step: 0.01 seconds between configurations
 
-Generated on: 2025-08-17 17:02:57.695300
+Generated on: 2025-08-18 05:39:37.531703
