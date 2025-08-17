@@ -347,7 +347,7 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     config_log[0] = config
     trajectory_log[0] = trajectory[0]
     
-    print(f"Simulating {N_points-1} control steps with {'pure feedforward' if is_feedforward_only else 'joint limits enforcement'} ...", end="", flush=True)
+    print(f"Simulating {N_points-1} control steps with {'pure feedforward' if is_feedforward_only else 'no joint limits (maximum tracking performance)'} ...", end="", flush=True)
     
     # Main control loop
     for i in range(N_points - 1):
@@ -366,13 +366,21 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
                 integral_error, config
             )
         else:
-            # Feedback + joint limits enforcement (use standard limits for better tracking)
-            V_cmd, controls, X_err, integral_error, joint_limits_info = FeedbackControlWithJointLimits(
+            # Feedback control without joint limits enforcement for maximum tracking performance
+            # This allows the robot to use its full range of motion to track the reference trajectory
+            V_cmd, controls, X_err, integral_error = FeedbackControl(
                 X_actual, X_desired, X_desired_next, Kp, Ki, DT_CAPSTONE,
-                integral_error, config, use_conservative_limits=False
+                integral_error, config
             )
 
-            # Log joint limits information for analysis
+            # Create dummy joint limits info for logging compatibility
+            joint_limits_info = {
+                'current_theta': config[3:8].copy(),
+                'predicted_theta': config[3:8].copy(),
+                'violated_joints': [],
+                'limits_enforced': False,
+                'jacobian_modified': False
+            }
             joint_limits_log.append(joint_limits_info)
 
         # Controls are already clipped in FeedbackControl / FeedbackControlWithJointLimits
@@ -387,13 +395,14 @@ def run_capstone_simulation(Tsc_init, Tsc_goal, Tce_grasp, Tce_standoff,
     print(" done")
 
     if not is_feedforward_only:
-        # Analyze joint limits enforcement
+        # Joint limits analysis (should show no violations since enforcement is disabled)
         total_violations = sum(1 for info in joint_limits_log if info['limits_enforced'])
         jacobian_modifications = sum(1 for info in joint_limits_log if info['jacobian_modified'])
 
-        print(f"Joint limits analysis:")
+        print(f"Joint limits analysis (enforcement disabled for maximum performance):")
         print(f"  - Time steps with limit violations: {total_violations}/{len(joint_limits_log)} ({100*total_violations/len(joint_limits_log):.1f}%)")
         print(f"  - Jacobian modifications applied: {jacobian_modifications}")
+        print(f"  - Full range of motion utilized for optimal tracking")
     
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)

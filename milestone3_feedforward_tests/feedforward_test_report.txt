@@ -34,4 +34,4 @@ File format: chassis_phi, chassis_x, chassis_y, J1, J2, J3, J4, J5, W1, W2, W3, 
 Compatible with: CoppeliaSim Scene 6 (CSV Mobile Manipulation youBot)
 Time step: 0.01 seconds between configurations
 
-Generated on: 2025-08-18 05:39:37.531703
+Generated on: 2025-08-18 05:56:01.896943
