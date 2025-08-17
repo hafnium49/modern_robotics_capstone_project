@@ -101,18 +101,18 @@ class TestMilestone4Setup:
         
         # Test grasp transform
         expected_grasp = np.array([
-            [1, 0, 0, 0],
-            [0, -1, 0, 0],
-            [0, 0, -1, 0.0],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [-1, 0, 0, 0.0],
             [0, 0, 0, 1]
         ])
         np.testing.assert_allclose(Tce_grasp, expected_grasp, rtol=1e-6)
-
-        # Test standoff transform (grasp + 0.10m in world Z)
+        
+        # Test standoff transform (grasp + 0.10m in z)
         expected_standoff = np.array([
-            [1, 0, 0, 0],
-            [0, -1, 0, 0],
-            [0, 0, -1, 0.10],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [-1, 0, 0, 0.10],
             [0, 0, 0, 1]
         ])
         np.testing.assert_allclose(Tce_standoff, expected_standoff, rtol=1e-6)

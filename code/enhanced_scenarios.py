@@ -35,18 +35,8 @@ except ImportError:
     
     def create_grasp_transforms():
         """Fallback grasp transforms with downward gripper orientation."""
-        # Keep the same orientation for grasp and standoff poses so the
-        # robot approaches the cube vertically.  Using different
-        # orientations here can cause the chassis to collide with the
-        # cube while moving into position.
-        Tce_grasp = np.array([[1, 0, 0, 0],
-                              [0, -1, 0, 0],
-                              [0, 0, -1, 0.0],
-                              [0, 0, 0, 1]])
-        Tce_standoff = np.array([[1, 0, 0, 0],
-                                 [0, -1, 0, 0],
-                                 [0, 0, -1, 0.10],
-                                 [0, 0, 0, 1]])
+        Tce_grasp = np.array([[0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0.0], [0, 0, 0, 1]])
+        Tce_standoff = np.array([[0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0.10], [0, 0, 0, 1]])
         return Tce_grasp, Tce_standoff
     
     def create_initial_ee_pose():

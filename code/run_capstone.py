@@ -142,17 +142,12 @@ def create_grasp_transforms():
         [0, 0, 0, 1]
     ])
 
-    # Standoff pose directly above the cube sharing the same downward
-    # orientation as the grasp pose, offset by 10 cm in the world Z
-    # direction.  The previous implementation used a different rotation,
-    # which caused the robot base to drive through the cube when
-    # approaching the grasp point.  Using the same orientation for both
-    # transforms keeps the approach vertical and prevents the base from
-    # overrunning the cube.
+    # Standoff pose directly above the cube with the same orientation,
+    # 10 cm higher than the grasp pose in the world Z direction.
     Tce_standoff = np.array([
-        [1, 0, 0, 0],
-        [0, -1, 0, 0],
-        [0, 0, -1, 0.10],
+        [0, 0, 1, 0],
+        [0, 1, 0, 0],
+        [-1, 0, 0, 0.10],
         [0, 0, 0, 1]
     ])
     
