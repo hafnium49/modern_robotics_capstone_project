@@ -224,15 +224,16 @@ def run_overshoot_scenario(output_dir=None):
     print("GENERATING OVERSHOOT SCENARIO RESULTS")
     print("="*60)
     
-    # High gains to cause overshoot
-    Kp = np.diag([12, 12, 12, 12, 12, 12])  # High proportional gains
-    Ki = np.diag([0, 0, 0, 0, 0, 0])  # No integral to emphasize overshoot
+    # Moderate gains to cause overshoot but still allow successful pickup
+    # Reduced from [12,12,12,12,12,12] which caused 1m+ tracking error
+    Kp = np.diag([6, 6, 6, 6, 6, 6])  # Moderate proportional gains - enough for overshoot but not complete failure
+    Ki = np.diag([0.05, 0.05, 0.05, 0.05, 0.05, 0.05])  # Small integral to help convergence
     
     return run_scenario(
         "overshoot", Kp, Ki,
-        controller_description="Feedforward + P Control (High Gains)",
-        gains_description="12, 12, 12, 12, 12, 12, 0, 0, 0, 0, 0, 0",
-        notes="High proportional gains demonstrate overshoot and oscillation",
+        controller_description="Feedforward + PI Control (Moderate Overshoot)",
+        gains_description="6, 6, 6, 6, 6, 6, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05",
+        notes="Moderate proportional gains demonstrate overshoot while maintaining cube pickup success",
         output_dir=output_dir
     )
 
