@@ -244,34 +244,35 @@ def run_newTask_scenario(output_dir=None):
     print("GENERATING NEW TASK SCENARIO RESULTS")
     print("="*60)
     
-    # Custom cube configurations for new task
-    # Initial cube at (2, 1, pi/4) - more challenging starting position
+    # Custom cube configurations for new task - more conservative positions to avoid instability
+    # Initial cube at (1.2, 0.8, 0) - closer to robot workspace center
     Tsc_init = np.array([
-        [np.cos(np.pi/4), -np.sin(np.pi/4), 0, 2.0],
-        [np.sin(np.pi/4),  np.cos(np.pi/4), 0, 1.0],
+        [1, 0, 0, 1.2],
+        [0, 1, 0, 0.8],
+        [0, 0, 1, 0.025],
+        [0, 0, 0, 1]
+    ])
+    
+    # Goal cube at (0.2, -0.8, pi/2) - 90° rotation for different task  
+    Tsc_goal = np.array([
+        [np.cos(np.pi/2), -np.sin(np.pi/2), 0, 0.2],
+        [np.sin(np.pi/2),  np.cos(np.pi/2), 0, -0.8],
         [0,                0,              1, 0.025],
         [0,                0,              0, 1]
     ])
     
-    # Goal cube at (-0.5, 1.5, -pi/3) - different orientation  
-    Tsc_goal = np.array([
-        [np.cos(-np.pi/3), -np.sin(-np.pi/3), 0, -0.5],
-        [np.sin(-np.pi/3),  np.cos(-np.pi/3), 0, 1.5],
-        [0,                 0,               1, 0.025],
-        [0,                 0,               0, 1]
-    ])
+    # Conservative PI controller to avoid extreme joint motions
+    # Use proven working gains from the best scenario
+    Kp = np.diag([3.0, 3.0, 3.0, 3.0, 3.0, 3.0])  # Same as best scenario
+    Ki = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # Same as best scenario
     
-    # Moderate PI controller for new task
-    Kp = np.diag([6, 6, 6, 6, 6, 6])
-    Ki = np.diag([0.3, 0.3, 0.3, 0.3, 0.3, 0.3])
-    
-    cube_configs = [(2.0, 1.0, np.pi/4), (-0.5, 1.5, -np.pi/3)]
+    cube_configs = [(1.2, 0.8, 0), (0.2, -0.8, np.pi/2)]
     
     return run_scenario(
         "newTask", Kp, Ki, Tsc_init, Tsc_goal,
-        controller_description="Feedforward + PI Control",
-        gains_description="6, 6, 6, 6, 6, 6, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3",
-        notes="Custom task with arbitrary cube configurations demonstrating system flexibility",
+        controller_description="Feedforward + PI Control (Conservative)",
+        gains_description="3, 3, 3, 3, 3, 3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1",
+        notes="Conservative task with stable cube configurations to avoid joint limit violations and excessive rotations",
         cube_configs=cube_configs,
         output_dir=output_dir
     )
