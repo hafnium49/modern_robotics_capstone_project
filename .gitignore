@@ -5,3 +5,8 @@ results/
 *_backup/
 *.zip
 debug_*/
+
+*_Peer-graded Assignment Completing the Project and Your Submission(course6)/
+*_UR5/
+*.Identifier
+*.pdf
